@@ -11,6 +11,9 @@ npm install better-dungeons
 ## Usage
 
 ```js
+const fs = require('fs')
+const betterdungeons = require('better-dungeons')
+
 var dungeon = await betterdungeons(100, 100, 0.3, 5, 5, Date.now().toString())
 var file = fs.createWriteStream('dungeon.txt');
 dungeon.mapArray.forEach(grid => {
