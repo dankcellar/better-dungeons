@@ -2,7 +2,7 @@ const pathfinding = require('pathfinding')
 const seedrandom = require('seedrandom')
 
 module.exports = generate
-module.exports.CreateDungeon = CreateDungeon
+module.exports.Dungeon = Dungeon
 
 /**
  * Generate a seedable procedural dungeons
@@ -15,7 +15,7 @@ module.exports.CreateDungeon = CreateDungeon
  */
 function generate(gridSizeWidth, gridSizeLength, percentAreWalls, minRoomSizeWidth, minRoomSizeLength, seed) {
     var passes = Math.floor(Math.sqrt(gridSizeWidth) * Math.sqrt(gridSizeLength) / 2)
-    return Promise.resolve(new CreateDungeon(gridSizeWidth, gridSizeLength, percentAreWalls, minRoomSizeWidth, minRoomSizeLength, seed))
+    return Promise.resolve(new Dungeon(gridSizeWidth, gridSizeLength, percentAreWalls, minRoomSizeWidth, minRoomSizeLength, seed))
         .then(dungeon => {
             dungeon.FillRandom()
             return dungeon
@@ -63,7 +63,7 @@ function generate(gridSizeWidth, gridSizeLength, percentAreWalls, minRoomSizeWid
  * @param {number} minRoomSizeLength 
  * @param {number} seed 
  */
-function CreateDungeon(gridSizeWidth, gridSizeLength, percentAreWalls, minRoomSizeWidth, minRoomSizeLength, seed) {
+function Dungeon(gridSizeWidth, gridSizeLength, percentAreWalls, minRoomSizeWidth, minRoomSizeLength, seed) {
     this.seed = seed
     this.gridSizeWidth = gridSizeWidth
     this.gridSizeLength = gridSizeLength
@@ -75,7 +75,7 @@ function CreateDungeon(gridSizeWidth, gridSizeLength, percentAreWalls, minRoomSi
     this.gridArray = new Array(gridSizeLength).fill(0).map(() => new Array(gridSizeWidth).fill(0))
 }
 
-CreateDungeon.prototype.FillRandom = function () {
+Dungeon.prototype.FillRandom = function () {
     for (var row = 0; row < this.gridSizeLength; row++) {
         for (var column = 0; column < this.gridSizeWidth; column++) {
             var rng = seedrandom(`${this.seed}-${this.gridSizeWidth}-${this.gridSizeLength}-${column}-${row}`)
@@ -95,7 +95,7 @@ CreateDungeon.prototype.FillRandom = function () {
     }
 }
 
-CreateDungeon.prototype.FillRooms = function () {
+Dungeon.prototype.FillRooms = function () {
     var counter = 3
     this.roomGrids.forEach(grid => {
         grid.forEach(point => {
@@ -105,7 +105,7 @@ CreateDungeon.prototype.FillRooms = function () {
     })
 }
 
-CreateDungeon.prototype.FillWalkable = function () {
+Dungeon.prototype.FillWalkable = function () {
     for (var row = 0; row < this.gridSizeLength; row++) {
         for (var column = 0; column < this.gridSizeWidth; column++) {
             if (this.gridArray[row][column] != 1) {
@@ -116,7 +116,7 @@ CreateDungeon.prototype.FillWalkable = function () {
     }
 }
 
-CreateDungeon.prototype.CreatWall = function (x, y) {
+Dungeon.prototype.CreatWall = function (x, y) {
     var value = this.gridArray[y][x]
     if (value == 0 || value == 1) {
         var numWalls = this.GetAdjacentWalls(x, y)
@@ -131,7 +131,7 @@ CreateDungeon.prototype.CreatWall = function (x, y) {
     return value
 }
 
-CreateDungeon.prototype.CreatWallHarder = function (x, y) {
+Dungeon.prototype.CreatWallHarder = function (x, y) {
     var value = this.gridArray[y][x]
     if (value == 0) {
         var numWalls = this.GetAdjacentWalls(x, y)
@@ -142,7 +142,7 @@ CreateDungeon.prototype.CreatWallHarder = function (x, y) {
     return value
 }
 
-CreateDungeon.prototype.CreateRooms = function () {
+Dungeon.prototype.CreateRooms = function () {
     var start = Date.now()
     var promises = []
     for (var row = 0; row < this.gridSizeLength; row++) {
@@ -180,7 +180,7 @@ CreateDungeon.prototype.CreateRooms = function () {
         .catch(err => console.log(err))
 }
 
-CreateDungeon.prototype.RemoveRoomsNotConnected = function () {
+Dungeon.prototype.RemoveRoomsNotConnected = function () {
     var midX = Math.floor((this.gridSizeWidth - 1) / 2)
     var midY = Math.floor((this.gridSizeLength - 1) / 2)
     var grid = new pathfinding.Grid(this.gridArray)
@@ -218,7 +218,7 @@ CreateDungeon.prototype.RemoveRoomsNotConnected = function () {
         .catch(err => console.log(err))
 }
 
-CreateDungeon.prototype.SmoothStep = function () {
+Dungeon.prototype.SmoothStep = function () {
     var mapOld = this.gridArray
     for (var row = 0; row < this.gridSizeLength; row++) {
         for (var column = 0; column < this.gridSizeWidth; column++) {
@@ -228,7 +228,7 @@ CreateDungeon.prototype.SmoothStep = function () {
     this.gridArray = mapOld
 }
 
-CreateDungeon.prototype.SmoothStepHarder = function () {
+Dungeon.prototype.SmoothStepHarder = function () {
     var mapOld = this.gridArray
     for (var row = 0; row < this.gridSizeLength; row++) {
         for (var column = 0; column < this.gridSizeWidth; column++) {
@@ -238,7 +238,7 @@ CreateDungeon.prototype.SmoothStepHarder = function () {
     this.gridArray = mapOld
 }
 
-CreateDungeon.prototype.IsMiddleRoom = function (x, y) {
+Dungeon.prototype.IsMiddleRoom = function (x, y) {
     var midX = Math.floor((this.gridSizeWidth - 1) / 2)
     var midY = Math.floor((this.gridSizeLength - 1) / 2)
     if (midX - this.minRoomSizeWidth <= x && x <= midX + this.minRoomSizeWidth) {
@@ -249,7 +249,7 @@ CreateDungeon.prototype.IsMiddleRoom = function (x, y) {
     return false
 }
 
-CreateDungeon.prototype.IsWall = function (x, y) {
+Dungeon.prototype.IsWall = function (x, y) {
     if (this.IsOutOfBounds(x, y))
         return true
     if (this.gridArray[y][x] == 1)
@@ -257,7 +257,7 @@ CreateDungeon.prototype.IsWall = function (x, y) {
     return false
 }
 
-CreateDungeon.prototype.IsRoom = function (x, y) {
+Dungeon.prototype.IsRoom = function (x, y) {
     if (this.IsOutOfBounds(x, y))
         return true
     if (this.gridArray[y][x] == 2)
@@ -265,7 +265,7 @@ CreateDungeon.prototype.IsRoom = function (x, y) {
     return false
 }
 
-CreateDungeon.prototype.IsOutOfBounds = function (x, y) {
+Dungeon.prototype.IsOutOfBounds = function (x, y) {
     if (x <= 0 || y <= 0)
         return true
     if (x >= this.gridSizeWidth - 1 || y >= this.gridSizeLength - 1)
@@ -273,7 +273,7 @@ CreateDungeon.prototype.IsOutOfBounds = function (x, y) {
     return false
 }
 
-CreateDungeon.prototype.IsNotPartOfARoom = function (x, y) {
+Dungeon.prototype.IsNotPartOfARoom = function (x, y) {
     this.roomGrids.forEach(room => {
         room.forEach(point => {
             if (point.x == x && point.y == y) {
@@ -284,7 +284,7 @@ CreateDungeon.prototype.IsNotPartOfARoom = function (x, y) {
     return true
 }
 
-CreateDungeon.prototype.GetAdjacentWalls = function (x, y) {
+Dungeon.prototype.GetAdjacentWalls = function (x, y) {
     var wallCounter = 0
     if (this.IsWall(x - 1, y - 1))
         wallCounter++;
@@ -307,7 +307,7 @@ CreateDungeon.prototype.GetAdjacentWalls = function (x, y) {
     return wallCounter
 }
 
-CreateDungeon.prototype.GetRoomWidth = function (x, y, counter) {
+Dungeon.prototype.GetRoomWidth = function (x, y, counter) {
     if (this.IsWall(x + 1, y)) {
         return counter
     } else {
@@ -315,7 +315,7 @@ CreateDungeon.prototype.GetRoomWidth = function (x, y, counter) {
     }
 }
 
-CreateDungeon.prototype.GetRoomLength = function (x, y, counter) {
+Dungeon.prototype.GetRoomLength = function (x, y, counter) {
     if (this.IsWall(x, y + 1)) {
         return counter
     } else {
@@ -323,7 +323,7 @@ CreateDungeon.prototype.GetRoomLength = function (x, y, counter) {
     }
 }
 
-CreateDungeon.prototype.GetRoomGrid = function (x, y, width, length) {
+Dungeon.prototype.GetRoomGrid = function (x, y, width, length) {
     var roomGrid = []
     for (var row = y; row < y + length; row++) {
         for (var column = x; column < x + width; column++) {
