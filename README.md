@@ -1,6 +1,6 @@
 # better-dungeons
 
-[![Build Status](https://travis-ci.org/edowney29/better-dungeons.svg?branch=master)](https://travis-ci.org/edowney29/better-dungeons) 
+![npm](https://img.shields.io/npm/dt/better-dungeons.svg) ![npm](https://img.shields.io/npm/v/better-dungeons.svg) [![Build Status](https://travis-ci.org/edowney29/better-dungeons.svg?branch=master)](https://travis-ci.org/edowney29/better-dungeons) 
 
 ## Install
 

@@ -1,7 +1,7 @@
 {
   "name": "better-dungeons",
   "version": "1.1.0",
-  "description": "A Brouge Procedural Dungeon Generator For Javascript :)",
+  "description": "A Brouge Asynchronous Procedural Dungeon Generator For Javascript :)",
   "main": "index.js",
   "scripts": {
     "test": "mocha"
@@ -15,6 +15,11 @@
   "bugs": {
     "url": "https://github.com/edowney29/better-dungeons/issues"
   },
+  "keywords": [
+    "procedural-generation",
+    "dungeon-generator",
+    "rougelike"
+  ],
   "homepage": "https://github.com/edowney29/better-dungeons#readme",
   "dependencies": {
     "pathfinding": "^0.4.18",
