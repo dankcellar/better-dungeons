@@ -1,5 +1,4 @@
 # better-dungeons
-> A Brouge Procedural Dungeon Generator For Javascript :)
 
 [![Build Status](https://travis-ci.org/edowney29/better-dungeons.svg?branch=master)](https://travis-ci.org/edowney29/better-dungeons) 
 

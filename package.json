@@ -1,6 +1,6 @@
 {
   "name": "better-dungeons",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A Brouge Procedural Dungeon Generator For Javascript :)",
   "main": "index.js",
   "scripts": {
@@ -11,7 +11,7 @@
     "url": "git+https://github.com/edowney29/better-dungeons.git"
   },
   "author": "Eric Downey <edowney29@gmail.com>",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/edowney29/better-dungeons/issues"
   },
