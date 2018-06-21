@@ -15,5 +15,9 @@
   "bugs": {
     "url": "https://github.com/edowney29/better-dungeons/issues"
   },
-  "homepage": "https://github.com/edowney29/better-dungeons#readme"
+  "homepage": "https://github.com/edowney29/better-dungeons#readme",
+  "dependencies": {
+    "pathfinding": "^0.4.18",
+    "seedrandom": "^2.4.3"
+  }
 }

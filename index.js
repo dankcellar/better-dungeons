@@ -43,7 +43,7 @@ function generate(sizeX, sizeY, percent, minX, minY, seed) {
         })
 }
 
-// TDOO: Enforce max grid size based off minRoomSize
+// TODO: Enforce max grid size based off minRoomSize
 function CreateDungeon(mapWidth, mapLength, percentAreWalls, minSizeWidth, minSizeLength, seed) {
     this.seed = seed
     this.mapWidth = mapWidth
