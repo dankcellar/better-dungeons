@@ -16,8 +16,8 @@ const betterdungeons = require('better-dungeons')
 
 var dungeon = await betterdungeons(100, 100, 0.3, 5, 5, Date.now().toString())
 var file = fs.createWriteStream('dungeon.txt');
-dungeon.mapArray.forEach(grid => {
-  file.write(grid.join('') + '\n');
+dungeon.gridArray.forEach(cell => {
+  file.write(cell.join('') + '\n');
 });
 file.end();
 ```
