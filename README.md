@@ -16,7 +16,7 @@ npm install better-dungeons
 const fs = require('fs')
 const betterdungeons = require('better-dungeons')
 
-CreateDungeon(100, 100, 0.3, 5, 5, Date.now())
+CreateDungeon(100, 100, 0.3, 5, 5, Date.now().toString())
 
 async function CreateDungeon(gridWidth, gridLength, percent, roomWidth, roomLength, seed) {
   try {
