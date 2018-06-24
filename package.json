@@ -19,7 +19,9 @@
     "procedural-generation",
     "dungeon-generator",
     "rougelike",
-    "game-development"
+    "game-development",
+    "html5-game",
+    "javascript-game"
   ],
   "homepage": "https://github.com/edowney29/better-dungeons#readme",
   "dependencies": {
