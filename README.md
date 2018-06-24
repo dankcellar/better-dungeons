@@ -4,7 +4,9 @@ Better dungeons is a fast seedable asynchronous procedural dungeon generator tha
 
 The dungeon.txt file is a 100 by 100 grid generated in 2.5 seconds!
 
-![npm](https://img.shields.io/npm/v/better-dungeons.svg) ![npm](https://img.shields.io/npm/dt/better-dungeons.svg) [![Build Status](https://travis-ci.org/edowney29/better-dungeons.svg?branch=master)](https://travis-ci.org/edowney29/better-dungeons) 
+[![npm](https://img.shields.io/npm/v/better-dungeons.svg)](https://www.npmjs.com/package/better-dungeons) 
+[![npm](https://img.shields.io/npm/dt/better-dungeons.svg)](https://www.npmjs.com/package/better-dungeons) 
+[![Build Status](https://travis-ci.org/edowney29/better-dungeons.svg?branch=master)](https://travis-ci.org/edowney29/better-dungeons)
 
 ```
 npm install better-dungeons
