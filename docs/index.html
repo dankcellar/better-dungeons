@@ -9,15 +9,16 @@
 <script src="bundle.js"></script>
 
 <body>
-    <h1>Very Very Simple Demo :)</h1>
+    <h1>Simple Demo :)</h1>
     <button type="button" onclick="generate()">Generate</button>
-    <br>
-    <br>
+    <p id="status">Generate a 100 by 100 dungeon</p>
     <script type="text/javascript">
         var app = new PIXI.Application(100 * 10, 100 * 10);
         document.body.appendChild(app.view);
+        var p = document.getElementById('status');
 
         function generate() {
+            var start = Date.now()
             betterdungeons(100, 100, 0.3, 5, 5, Date.now().toString())
                 .then(dungeon => {
                     var graphics = new PIXI.Graphics();
@@ -33,10 +34,11 @@
                             };
                         };
                     };
+                    p.innerHTML = 'Timer: ' + (Date.now() - start) / 1000 + ' seconds'
                     app.stage.addChild(graphics);
                 })
                 .catch(err => {
-
+                    p.innerHTML = 'Something went wrong :(';
                 });
         };
     </script>
