@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>better-dungeons</title>
+</head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/4.7.1/pixi.min.js"></script>
+<script src="../docs/bundle.js"></script>
+
+<body>
+    <h1>Very Very Simple Demo :)</h1>
+    <button type="button" onclick="generate()">Generate</button>
+    <br>
+    <br>
+    <script type="text/javascript">
+        var app = new PIXI.Application(100 * 10, 100 * 10);
+        document.body.appendChild(app.view);
+
+        function generate() {
+            betterdungeons(100, 100, 0.3, 5, 5, Date.now().toString())
+                .then(dungeon => {
+                    var graphics = new PIXI.Graphics();
+                    for (var row = 0; row < dungeon.gridSizeLength; row++) {
+                        for (var column = 0; column < dungeon.gridSizeWidth; column++) {
+                            if (dungeon.gridArray[row][column] == 1) {
+                                graphics.beginFill(0x2F4F4F, 1);
+                                graphics.drawRect(column * 10, row * 10, 10, 10);
+                            };
+                            if (dungeon.gridArray[row][column] == 0) {
+                                graphics.beginFill(0xD3D3D3, 1);
+                                graphics.drawRect(column * 10, row * 10, 10, 10);
+                            };
+                        };
+                    };
+                    app.stage.addChild(graphics);
+                })
+                .catch(err => {
+
+                });
+        };
+    </script>
+</body>
+
+</html>

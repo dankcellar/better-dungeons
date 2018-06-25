@@ -40,5 +40,3 @@ async function CreateDungeon(gridWidth, gridLength, percent, roomWidth, roomLeng
 - Generate interior walls and doors within rooms
 - Better room creation for more negative space
 - Add pre-made rooms
-- Do proper testing
-- Online demostration
