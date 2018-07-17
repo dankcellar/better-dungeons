@@ -22,8 +22,8 @@ CreateDungeon(100, 100, 0.3, 5, 5, Date.now().toString())
 
 async function CreateDungeon(gridWidth, gridLength, percent, roomWidth, roomLength, seed) {
   try {
-    var dungeon = await betterdungeons(gridWidth, gridLength, percent, roomWidth, roomLength, seed)
-    var file = fs.createWriteStream('dungeon.txt');
+    const dungeon = await betterdungeons(gridWidth, gridLength, percent, roomWidth, roomLength, seed)
+    const file = fs.createWriteStream('dungeon.txt');
     dungeon.gridArray.forEach(cell => {
       file.write(cell.join(',') + '\n');
     });
