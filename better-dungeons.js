@@ -44,7 +44,7 @@ function createDungeon(gridSizeWidth, gridSizeLength, percentAreWalls, minRoomSi
 			return dungeon;
 		})
 		.then(dungeon => {
-			dungeon.removeRoomsNotConnected();
+			dungeon.removeRooms();
 			return dungeon;
 		})
 		.catch(err => {
@@ -119,17 +119,6 @@ Dungeon.prototype.creatWall = function (x, y) {
 	return value;
 };
 
-Dungeon.prototype.creatWallHarder = function (x, y) {
-	let value = this.gridArray[y][x];
-	if (value === 0) {
-		const numWalls = this.getAdjacentWalls(x, y);
-		if (numWalls > 2) {
-			value = 1;
-		}
-	}
-	return value;
-};
-
 Dungeon.prototype.createRooms = function () {
 	const promises = [];
 	for (let row = 0; row < this.gridSizeLength; row++) {
@@ -166,7 +155,18 @@ Dungeon.prototype.createRooms = function () {
 		.catch(err => console.log(err));
 };
 
-Dungeon.prototype.removeRoomsNotConnected = function () {
+Dungeon.prototype.creatWallAroundRooms = function (x, y) {
+	let value = this.gridArray[y][x];
+	if (value === 0) {
+		const numWalls = this.getAdjacentWalls(x, y);
+		if (numWalls > 2) {
+			value = 1;
+		}
+	}
+	return value;
+};
+
+Dungeon.prototype.removeRooms = function () {
 	const midX = Math.floor((this.gridSizeWidth - 1) / 2);
 	const midY = Math.floor((this.gridSizeLength - 1) / 2);
 	const grid = new pathfinding.Grid(this.gridArray);
@@ -205,23 +205,19 @@ Dungeon.prototype.removeRoomsNotConnected = function () {
 };
 
 Dungeon.prototype.smoothStep = function () {
-	const mapOld = this.gridArray;
 	for (let row = 0; row < this.gridSizeLength; row++) {
 		for (let column = 0; column < this.gridSizeWidth; column++) {
-			mapOld[row][column] = this.creatWall(column, row);
+			this.gridArray[row][column] = this.creatWall(column, row);
 		}
 	}
-	this.gridArray = mapOld;
 };
 
-Dungeon.prototype.smoothStepHarder = function () {
-	const mapOld = this.gridArray;
+Dungeon.prototype.smoothStepAroundRooms = function () {
 	for (let row = 0; row < this.gridSizeLength; row++) {
 		for (let column = 0; column < this.gridSizeWidth; column++) {
-			mapOld[row][column] = this.creatWallHarder(column, row);
+			this.gridArray[row][column] = this.creatWallAroundRooms(column, row);
 		}
 	}
-	this.gridArray = mapOld;
 };
 
 Dungeon.prototype.isMiddleRoom = function (x, y) {
@@ -240,16 +236,6 @@ Dungeon.prototype.isWall = function (x, y) {
 		return true;
 	}
 	if (this.gridArray[y][x] === 1) {
-		return true;
-	}
-	return false;
-};
-
-Dungeon.prototype.isPartOfARoom = function (x, y) {
-	if (this.isOutOfBounds(x, y)) {
-		return true;
-	}
-	if (this.gridArray[y][x] === 2) {
 		return true;
 	}
 	return false;
