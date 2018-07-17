@@ -31,7 +31,7 @@ function createDungeon(gridSizeWidth, gridSizeLength, percentAreWalls, minRoomSi
 		})
 		.then(dungeon => {
 			for (let i = 0; i < passes; i++) {
-				dungeon.smoothStepHarder();
+				dungeon.smoothStepAroundRooms();
 			}
 			return dungeon;
 		})
