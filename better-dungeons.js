@@ -60,6 +60,7 @@ function Dungeon(gridSizeWidth, gridSizeLength, percentAreWalls, minRoomSizeWidt
 	this.minRoomSizeWidth = minRoomSizeWidth;
 	this.minRoomSizeLength = minRoomSizeLength;
 	this.roomGrids = [];
+	this.pathGrids = [];
 	this.walkableArea = 0;
 	this.gridArray = new Array(gridSizeLength).fill(0).map(() => new Array(gridSizeWidth).fill(0));
 }
@@ -189,6 +190,7 @@ Dungeon.prototype.removeRooms = function () {
 	Promise.all(promises)
 		.then(pathsArray => {
 			const newRoomGrids = [];
+			const newPathGrids = [];
 			pathsArray.forEach(pathInfo => {
 				if (pathInfo.path.length === 0) {
 					const grid = this.roomGrids[pathInfo.index];
@@ -197,9 +199,11 @@ Dungeon.prototype.removeRooms = function () {
 					});
 				} else {
 					newRoomGrids.push(this.roomGrids[pathInfo.index]);
+					newPathGrids.push(pathInfo.path);
 				}
 			});
 			this.roomGrids = newRoomGrids;
+			this.pathGrids = newPathGrids;
 		})
 		.catch(err => console.log(err));
 };
