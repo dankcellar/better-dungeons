@@ -14,6 +14,6 @@ describe('Dungeon correct', () => {
 	});
 	it('should have contains rooms', async () => {
 		const dungeon = await betterdungeons(100, 10, 0.3, 3, 3, 'randomseed');
-		assert.ok(dungeon.roomGrids.length > 0);
+		assert.ok(dungeon.rooms.length > 0);
 	});
 });
