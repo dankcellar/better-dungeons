@@ -5,16 +5,16 @@ module.exports = createDungeon;
 
 /**
  * Create a dungeon
- * @param {number} gridSizeWidth
- * @param {number} gridSizeLength
- * @param {number} percentAreWalls
- * @param {number} minRoomSizeWidth
- * @param {number} minRoomSizeLength
+ * @param {number} gridWidth
+ * @param {number} gridLength
+ * @param {number} percentWalls
+ * @param {number} minRoomWidth
+ * @param {number} minRoomLength
  * @param {string} seed
  */
-function createDungeon(gridSizeWidth, gridSizeLength, percentAreWalls, minRoomSizeWidth, minRoomSizeLength, seed) {
-	const passes = Math.floor(Math.sqrt(gridSizeWidth) * Math.sqrt(gridSizeLength) / 2);
-	return Promise.resolve(new Dungeon(gridSizeWidth, gridSizeLength, percentAreWalls, minRoomSizeWidth, minRoomSizeLength, seed))
+function createDungeon(gridWidth, gridLength, percentWalls, minRoomWidth, minRoomLength, seed) {
+	const passes = Math.floor((Math.sqrt(gridWidth) * Math.sqrt(gridLength)) / 2);
+	return Promise.resolve(new Dungeon(gridWidth, gridLength, percentWalls, minRoomWidth, minRoomLength, seed))
 		.then(dungeon => {
 			dungeon.fillRandom();
 			return dungeon;
@@ -52,34 +52,35 @@ function createDungeon(gridSizeWidth, gridSizeLength, percentAreWalls, minRoomSi
 		});
 }
 
-function Dungeon(gridSizeWidth, gridSizeLength, percentAreWalls, minRoomSizeWidth, minRoomSizeLength, seed) {
+function Dungeon(gridWidth, gridLength, percentWalls, minRoomWidth, minRoomLength, seed) {
 	this.seed = seed;
-	this.gridSizeWidth = gridSizeWidth;
-	this.gridSizeLength = gridSizeLength;
-	this.percentAreWalls = percentAreWalls;
-	this.minRoomSizeWidth = minRoomSizeWidth;
-	this.minRoomSizeLength = minRoomSizeLength;
-	this.roomGrids = [];
-	this.walkableArea = 0;
-	this.gridArray = new Array(gridSizeLength).fill(0).map(() => new Array(gridSizeWidth).fill(0));
+	this.gridWidth = gridWidth;
+	this.gridLength = gridLength;
+	this.percentWalls = percentWalls;
+	this.minRoomWidth = minRoomWidth;
+	this.minRoomLength = minRoomLength;
+	this.walkableCells = 0;
+	this.rooms = [];
+	this.paths = [];
+	this.grid = new Array(gridLength).fill(0).map(() => new Array(gridWidth).fill(0));
 }
 
 Dungeon.prototype.fillRandom = function () {
-	for (let row = 0; row < this.gridSizeLength; row++) {
-		for (let column = 0; column < this.gridSizeWidth; column++) {
-			const rng = seedrandom(`${this.seed}-${this.gridSizeWidth}-${this.gridSizeLength}-${column}-${row}`);
+	for (let row = 0; row < this.gridLength; row++) {
+		for (let column = 0; column < this.gridWidth; column++) {
+			const rng = seedrandom(`${this.seed}-${this.gridWidth}-${this.gridLength}-${column}-${row}`);
 			if (column === 0) {
-				this.gridArray[row][column] = 1;
+				this.grid[row][column] = 1;
 			} else if (row === 0) {
-				this.gridArray[row][column] = 1;
-			} else if (column === this.gridSizeWidth - 1) {
-				this.gridArray[row][column] = 1;
-			} else if (row === this.gridSizeLength - 1) {
-				this.gridArray[row][column] = 1;
+				this.grid[row][column] = 1;
+			} else if (column === this.gridWidth - 1) {
+				this.grid[row][column] = 1;
+			} else if (row === this.gridLength - 1) {
+				this.grid[row][column] = 1;
 			} else if (this.isMiddleRoom(column, row)) {
-				this.gridArray[row][column] = 2;
-			} else if (rng() < this.percentAreWalls) {
-				this.gridArray[row][column] = 1;
+				this.grid[row][column] = 2;
+			} else if (rng() < this.percentWalls) {
+				this.grid[row][column] = 1;
 			}
 		}
 	}
@@ -87,27 +88,27 @@ Dungeon.prototype.fillRandom = function () {
 
 Dungeon.prototype.fillRooms = function () {
 	let counter = 3;
-	this.roomGrids.forEach(grid => {
-		grid.forEach(point => {
-			this.gridArray[point.y][point.x] = counter;
+	this.rooms.forEach(room => {
+		room.forEach(cell => {
+			this.grid[cell.y][cell.x] = counter;
 		});
 		counter++;
 	});
 };
 
 Dungeon.prototype.fillWalkable = function () {
-	for (let row = 0; row < this.gridSizeLength; row++) {
-		for (let column = 0; column < this.gridSizeWidth; column++) {
-			if (this.gridArray[row][column] !== 1) {
-				this.gridArray[row][column] = 0;
-				this.walkableArea += 1;
+	for (let row = 0; row < this.gridLength; row++) {
+		for (let column = 0; column < this.gridWidth; column++) {
+			if (this.grid[row][column] !== 1) {
+				this.grid[row][column] = 0;
+				this.walkableCells += 1;
 			}
 		}
 	}
 };
 
 Dungeon.prototype.creatWall = function (x, y) {
-	let value = this.gridArray[y][x];
+	let value = this.grid[y][x];
 	const numWalls = this.getAdjacentWalls(x, y);
 	if (this.isOutOfBounds(x, y)) {
 		value = 1;
@@ -121,23 +122,23 @@ Dungeon.prototype.creatWall = function (x, y) {
 
 Dungeon.prototype.createRooms = function () {
 	const promises = [];
-	for (let row = 0; row < this.gridSizeLength; row++) {
-		for (let column = 0; column < this.gridSizeWidth; column++) {
+	for (let row = 0; row < this.gridLength; row++) {
+		for (let column = 0; column < this.gridWidth; column++) {
 			const p = new Promise(resolve => {
-				if (this.gridArray[row][column] === 0 && this.isNotPartOfARoom(column, row)) {
+				if (this.grid[row][column] === 0 && this.isNotPartOfARoom(column, row)) {
 					const roomWidth = this.getRoomWidth(column, row, 1);
-					if (roomWidth >= this.minRoomSizeWidth) {
+					if (roomWidth >= this.minRoomWidth) {
 						const possibleLengths = [];
 						for (let j = 0; j < roomWidth; j++) {
 							possibleLengths.push(this.getRoomLength(column + j, row, 1));
 						}
-						let roomLength = this.gridSizeLength;
+						let roomLength = this.gridLength;
 						possibleLengths.forEach(length => {
 							if (length < roomLength) {
 								roomLength = length;
 							}
 						});
-						if (roomLength >= this.minRoomSizeLength && roomLength !== this.gridSizeLength) {
+						if (roomLength >= this.minRoomLength && roomLength !== this.gridLength) {
 							const roomGrid = this.getRoomGrid(column, row, roomWidth, roomLength);
 							resolve(roomGrid);
 						}
@@ -149,14 +150,14 @@ Dungeon.prototype.createRooms = function () {
 		}
 	}
 	Promise.all(promises)
-		.then(roomGrids => {
-			this.roomGrids = roomGrids.filter(room => room !== null);
+		.then(rooms => {
+			this.rooms = rooms.filter(room => room !== null);
 		})
 		.catch(err => console.log(err));
 };
 
 Dungeon.prototype.creatWallAroundRooms = function (x, y) {
-	let value = this.gridArray[y][x];
+	let value = this.grid[y][x];
 	if (value === 0) {
 		const numWalls = this.getAdjacentWalls(x, y);
 		if (numWalls > 2) {
@@ -167,64 +168,69 @@ Dungeon.prototype.creatWallAroundRooms = function (x, y) {
 };
 
 Dungeon.prototype.removeRooms = function () {
-	const midX = Math.floor((this.gridSizeWidth - 1) / 2);
-	const midY = Math.floor((this.gridSizeLength - 1) / 2);
-	const grid = new pathfinding.Grid(this.gridArray);
+	const midCell = {
+		x: Math.floor((this.gridWidth - 1) / 2),
+		y: Math.floor((this.gridLength - 1) / 2)
+	};
+	const grid = new pathfinding.Grid(this.grid);
 	const finder = new pathfinding.AStarFinder({
 		diagonalMovement: pathfinding.DiagonalMovement.Never
 	});
 	const promises = [];
-	this.roomGrids.forEach((room, index) => {
+	this.rooms.forEach((room, index) => {
 		const p = new Promise(resolve => {
-			const cell = room[0];
-			const copy = grid.clone();
-			const path = finder.findPath(cell.x, cell.y, midX, midY, copy);
+			const cell = room[Math.floor((room.length - 1) / 2)];
+			const gridClone = grid.clone();
+			const pathGrid = finder.findPath(cell.x, cell.y, midCell.x, midCell.y, gridClone);
 			resolve({
-				path,
+				pathGrid,
 				index
 			});
 		});
 		promises.push(p);
 	});
 	Promise.all(promises)
-		.then(pathsArray => {
-			const newRoomGrids = [];
-			pathsArray.forEach(pathInfo => {
-				if (pathInfo.path.length === 0) {
-					const grid = this.roomGrids[pathInfo.index];
-					grid.forEach(point => {
-						this.gridArray[point.y][point.x] = 1;
+		.then(paths => {
+			const roomGrids = [];
+			const pathGrids = [];
+			paths.forEach(path => {
+				if (path.pathGrid.length === 0) {
+					const grid = this.rooms[path.index];
+					grid.forEach(cell => {
+						this.grid[cell.y][cell.x] = 1;
 					});
 				} else {
-					newRoomGrids.push(this.roomGrids[pathInfo.index]);
+					roomGrids.push(this.rooms[path.index]);
+					pathGrids.push(path.pathGrid);
 				}
 			});
-			this.roomGrids = newRoomGrids;
+			this.rooms = roomGrids;
+			this.paths = pathGrids;
 		})
 		.catch(err => console.log(err));
 };
 
 Dungeon.prototype.smoothStep = function () {
-	for (let row = 0; row < this.gridSizeLength; row++) {
-		for (let column = 0; column < this.gridSizeWidth; column++) {
-			this.gridArray[row][column] = this.creatWall(column, row);
+	for (let row = 0; row < this.gridLength; row++) {
+		for (let column = 0; column < this.gridWidth; column++) {
+			this.grid[row][column] = this.creatWall(column, row);
 		}
 	}
 };
 
 Dungeon.prototype.smoothStepAroundRooms = function () {
-	for (let row = 0; row < this.gridSizeLength; row++) {
-		for (let column = 0; column < this.gridSizeWidth; column++) {
-			this.gridArray[row][column] = this.creatWallAroundRooms(column, row);
+	for (let row = 0; row < this.gridLength; row++) {
+		for (let column = 0; column < this.gridWidth; column++) {
+			this.grid[row][column] = this.creatWallAroundRooms(column, row);
 		}
 	}
 };
 
 Dungeon.prototype.isMiddleRoom = function (x, y) {
-	const midX = Math.floor((this.gridSizeWidth - 1) / 2);
-	const midY = Math.floor((this.gridSizeLength - 1) / 2);
-	if (midX - this.minRoomSizeWidth <= x && x <= midX + this.minRoomSizeWidth) {
-		if (midY - this.minRoomSizeLength <= y && y <= midY + this.minRoomSizeLength) {
+	const midX = Math.floor((this.gridWidth - 1) / 2);
+	const midY = Math.floor((this.gridLength - 1) / 2);
+	if (midX - this.minRoomWidth <= x && x <= midX + this.minRoomWidth) {
+		if (midY - this.minRoomLength <= y && y <= midY + this.minRoomLength) {
 			return true;
 		}
 	}
@@ -235,7 +241,7 @@ Dungeon.prototype.isWall = function (x, y) {
 	if (this.isOutOfBounds(x, y)) {
 		return true;
 	}
-	if (this.gridArray[y][x] === 1) {
+	if (this.grid[y][x] === 1) {
 		return true;
 	}
 	return false;
@@ -245,16 +251,16 @@ Dungeon.prototype.isOutOfBounds = function (x, y) {
 	if (x <= 0 || y <= 0) {
 		return true;
 	}
-	if (x >= this.gridSizeWidth - 1 || y >= this.gridSizeLength - 1) {
+	if (x >= this.gridWidth - 1 || y >= this.gridLength - 1) {
 		return true;
 	}
 	return false;
 };
 
 Dungeon.prototype.isNotPartOfARoom = function (x, y) {
-	this.roomGrids.forEach(room => {
-		room.forEach(point => {
-			if (point.x === x && point.y === y) {
+	this.rooms.forEach(room => {
+		room.forEach(cell => {
+			if (cell.x === x && cell.y === y) {
 				return false;
 			}
 		});

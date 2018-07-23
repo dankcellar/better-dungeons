@@ -5,8 +5,8 @@ describe('Dungeon correct', () => {
 	it('should be the correct size', async () => {
 		const dungeon = await betterdungeons(10, 10, 0.3, 3, 3, 'randomseed');
 		let counter = 0;
-		for (let row = 0; row < dungeon.gridSizeLength; row++) {
-			for (let column = 0; column < dungeon.gridSizeWidth; column++) {
+		for (let row = 0; row < dungeon.gridLength; row++) {
+			for (let column = 0; column < dungeon.gridWidth; column++) {
 				counter++;
 			}
 		}
@@ -14,6 +14,6 @@ describe('Dungeon correct', () => {
 	});
 	it('should have contains rooms', async () => {
 		const dungeon = await betterdungeons(100, 10, 0.3, 3, 3, 'randomseed');
-		assert.ok(dungeon.roomGrids.length > 0);
+		assert.ok(dungeon.rooms.length > 0);
 	});
 });
