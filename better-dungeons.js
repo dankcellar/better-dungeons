@@ -5,12 +5,13 @@ module.exports = createDungeon;
 
 /**
  * Create a dungeon
- * @param {number} gridWidth
- * @param {number} gridLength
- * @param {number} percentWalls
- * @param {number} minRoomWidth
- * @param {number} minRoomLength
- * @param {string} seed
+ * @param {Number} gridWidth
+ * @param {Number} gridLength
+ * @param {Number} percentWalls
+ * @param {Number} minRoomWidth
+ * @param {Number} minRoomLength
+ * @param {String} seed
+ * @return {Promise<Dungeon>}
  */
 function createDungeon(gridWidth, gridLength, percentWalls, minRoomWidth, minRoomLength, seed) {
 	const passes = Math.floor((Math.sqrt(gridWidth) * Math.sqrt(gridLength)) / 2);
@@ -48,7 +49,7 @@ function createDungeon(gridWidth, gridLength, percentWalls, minRoomWidth, minRoo
 			return dungeon;
 		})
 		.catch(err => {
-			throw err;
+			throw new Error(err);
 		});
 }
 

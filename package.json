@@ -1,6 +1,6 @@
 {
   "name": "better-dungeons",
-  "version": "3.0.2",
+  "version": "3.1.0",
   "description": "A Fast Seedable Asynchronous Procedural Dungeon Generator For Javascript",
   "main": "better-dungeons.js",
   "scripts": {
