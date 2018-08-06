@@ -21,11 +21,6 @@ async function createDungeon(gridWidth, gridLength, percentWalls, minRoomWidth, 
 		dungeon.smoothStep();
 	}
 	await dungeon.createRooms();
-	dungeon.fillRooms();
-	for (let i = 0; i < passes; i++) {
-		dungeon.smoothStepAroundRooms();
-	}
-	dungeon.fillWalkable();
 	await dungeon.removeRooms();
 	dungeon.fillRooms();
 	for (let i = 0; i < passes; i++) {
@@ -55,7 +50,7 @@ Dungeon.prototype.fillRandom = function () {
 				this.grid[row][column] = 1;
 			}
 			if (this.isMiddleRoom(column, row)) {
-				this.grid[row][column] = 2;
+				this.grid[row][column] = 0;
 			}
 		}
 	}
