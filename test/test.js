@@ -13,7 +13,7 @@ describe('Create new Dungeon', () => {
 		assert.equal(counter, 100);
 	});
 	it('should have some rooms', async () => {
-		const dungeon = await betterdungeons(30, 30, 0.3, 3, 3, new Date().getTime().toString());
+		const dungeon = await betterdungeons(100, 100, 0.3, 5, 5, new Date().getTime().toString());
 		assert.ok(dungeon.rooms.length > 0 && dungeon.paths.length > 0);
 	});
 });
