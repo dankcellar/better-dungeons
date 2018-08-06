@@ -15,42 +15,17 @@ module.exports = createDungeon;
  */
 function createDungeon(gridWidth, gridLength, percentWalls, minRoomWidth, minRoomLength, seed) {
 	const passes = Math.floor((Math.sqrt(gridWidth) * Math.sqrt(gridLength)) / 2);
-	return Promise.resolve(new Dungeon(gridWidth, gridLength, percentWalls, minRoomWidth, minRoomLength, seed))
-		.then(dungeon => {
-			dungeon.fillRandom();
-			return dungeon;
-		})
-		.then(dungeon => {
-			for (let i = 0; i < passes; i++) {
-				dungeon.smoothStep();
-			}
-			return dungeon;
-		})
-		.then(dungeon => {
-			dungeon.createRooms();
-			return dungeon;
-		})
-		.then(dungeon => {
-			for (let i = 0; i < passes; i++) {
-				dungeon.smoothStepAroundRooms();
-			}
-			return dungeon;
-		})
-		.then(dungeon => {
-			dungeon.fillRooms();
-			return dungeon;
-		})
-		.then(dungeon => {
-			dungeon.fillWalkable();
-			return dungeon;
-		})
-		.then(dungeon => {
-			dungeon.removeRooms();
-			return dungeon;
-		})
-		.catch(err => {
-			throw new Error(err);
-		});
+	const dungeon = new Dungeon(gridWidth, gridLength, percentWalls, minRoomWidth, minRoomLength, seed);
+	dungeon.fillRandom();
+	for (let i = 0; i < passes; i++) {
+		dungeon.smoothStep(dungeon.grid);
+	}
+	dungeon.createRooms();
+	dungeon.removeRooms();
+	for (let i = 0; i < passes; i++) {
+		dungeon.smoothStepAroundRooms(dungeon.grid);
+	}
+	return dungeon;
 }
 
 function Dungeon(gridWidth, gridLength, percentWalls, minRoomWidth, minRoomLength, seed) {
@@ -60,7 +35,7 @@ function Dungeon(gridWidth, gridLength, percentWalls, minRoomWidth, minRoomLengt
 	this.percentWalls = percentWalls;
 	this.minRoomWidth = minRoomWidth;
 	this.minRoomLength = minRoomLength;
-	this.walkableCells = 0;
+	this.usedCells = [];
 	this.rooms = [];
 	this.paths = [];
 	this.grid = new Array(gridLength).fill(0).map(() => new Array(gridWidth).fill(0));
@@ -79,93 +54,56 @@ Dungeon.prototype.fillRandom = function () {
 			} else if (row === this.gridLength - 1) {
 				this.grid[row][column] = 1;
 			} else if (this.isMiddleRoom(column, row)) {
-				this.grid[row][column] = 2;
+				this.grid[row][column] = 0;
 			} else if (rng() < this.percentWalls) {
 				this.grid[row][column] = 1;
 			}
 		}
 	}
 };
-
+/*
 Dungeon.prototype.fillRooms = function () {
-	let counter = 3;
-	this.rooms.forEach(room => {
+	this.rooms.forEach((room, index) => {
 		room.forEach(cell => {
-			this.grid[cell.y][cell.x] = counter;
+			this.grid[cell.y][cell.x] = index + 2;
 		});
-		counter++;
 	});
 };
-
+*/
 Dungeon.prototype.fillWalkable = function () {
 	for (let row = 0; row < this.gridLength; row++) {
 		for (let column = 0; column < this.gridWidth; column++) {
 			if (this.grid[row][column] !== 1) {
 				this.grid[row][column] = 0;
-				this.walkableCells += 1;
 			}
 		}
 	}
 };
 
-Dungeon.prototype.creatWall = function (x, y) {
-	let value = this.grid[y][x];
-	const numWalls = this.getAdjacentWalls(x, y);
-	if (this.isOutOfBounds(x, y)) {
-		value = 1;
-	} else if (numWalls > 4) {
-		value = 1;
-	} else if (numWalls < 4) {
-		value = 0;
-	}
-	return value;
-};
-
 Dungeon.prototype.createRooms = function () {
-	const promises = [];
 	for (let row = 0; row < this.gridLength; row++) {
 		for (let column = 0; column < this.gridWidth; column++) {
-			const p = new Promise(resolve => {
-				if (this.grid[row][column] === 0 && this.isNotPartOfARoom(column, row)) {
-					const roomWidth = this.getRoomWidth(column, row, 1);
-					if (roomWidth >= this.minRoomWidth) {
-						const possibleLengths = [];
-						for (let j = 0; j < roomWidth; j++) {
-							possibleLengths.push(this.getRoomLength(column + j, row, 1));
+			if (this.grid[row][column] === 0 && this.isNotPartOfARoom(column, row)) {
+				const roomWidth = this.countRoomWidth(column, row, 1);
+				if (roomWidth >= this.minRoomWidth) {
+					const possibleLengths = [];
+					for (let j = 0; j < roomWidth; j++) {
+						possibleLengths.push(this.countRoomLength(column + j, row, 1));
+					}
+					let roomLength = this.gridLength;
+					possibleLengths.forEach(length => {
+						if (length < roomLength) {
+							roomLength = length;
 						}
-						let roomLength = this.gridLength;
-						possibleLengths.forEach(length => {
-							if (length < roomLength) {
-								roomLength = length;
-							}
-						});
-						if (roomLength >= this.minRoomLength && roomLength !== this.gridLength) {
-							const roomGrid = this.getRoomGrid(column, row, roomWidth, roomLength);
-							resolve(roomGrid);
-						}
+					});
+					if (roomLength >= this.minRoomLength) {
+						const room = this.getRoomArray(column, row, roomWidth, roomLength);
+						this.rooms.push(room);
 					}
 				}
-				resolve(null);
-			});
-			promises.push(p);
+			}
 		}
 	}
-	Promise.all(promises)
-		.then(rooms => {
-			this.rooms = rooms.filter(room => room !== null);
-		})
-		.catch(err => console.log(err));
-};
-
-Dungeon.prototype.creatWallAroundRooms = function (x, y) {
-	let value = this.grid[y][x];
-	if (value === 0) {
-		const numWalls = this.getAdjacentWalls(x, y);
-		if (numWalls > 2) {
-			value = 1;
-		}
-	}
-	return value;
 };
 
 Dungeon.prototype.removeRooms = function () {
@@ -177,54 +115,71 @@ Dungeon.prototype.removeRooms = function () {
 	const finder = new pathfinding.AStarFinder({
 		diagonalMovement: pathfinding.DiagonalMovement.Never
 	});
-	const promises = [];
-	this.rooms.forEach((room, index) => {
-		const p = new Promise(resolve => {
-			const cell = room[Math.floor((room.length - 1) / 2)];
-			const gridClone = grid.clone();
-			const pathGrid = finder.findPath(cell.x, cell.y, midCell.x, midCell.y, gridClone);
-			resolve({
-				pathGrid,
-				index
+
+	this.rooms.forEach(room => {
+		const cell = room[Math.floor((room.length - 1) / 2)];
+		const clone = grid.clone();
+		const path = finder.findPath(cell.x, cell.y, midCell.x, midCell.y, clone);
+		if (path.length === 0) {
+			room.forEach(cell => {
+				this.grid[cell.y][cell.x] = 1;
 			});
-		});
-		promises.push(p);
+		} else {
+			this.paths.push(path);
+		}
 	});
-	Promise.all(promises)
-		.then(paths => {
-			const roomGrids = [];
-			const pathGrids = [];
-			paths.forEach(path => {
-				if (path.pathGrid.length === 0) {
-					const grid = this.rooms[path.index];
-					grid.forEach(cell => {
-						this.grid[cell.y][cell.x] = 1;
-					});
-				} else {
-					roomGrids.push(this.rooms[path.index]);
-					pathGrids.push(path.pathGrid);
-				}
-			});
-			this.rooms = roomGrids;
-			this.paths = pathGrids;
-		})
-		.catch(err => console.log(err));
 };
 
-Dungeon.prototype.smoothStep = function () {
+Dungeon.prototype.smoothStep = function (grid) {
 	for (let row = 0; row < this.gridLength; row++) {
 		for (let column = 0; column < this.gridWidth; column++) {
-			this.grid[row][column] = this.creatWall(column, row);
+			grid[row][column] = this.checkCell(column, row);
 		}
 	}
+	this.grid = grid;
 };
 
-Dungeon.prototype.smoothStepAroundRooms = function () {
+Dungeon.prototype.smoothStepAroundRooms = function (grid) {
 	for (let row = 0; row < this.gridLength; row++) {
 		for (let column = 0; column < this.gridWidth; column++) {
-			this.grid[row][column] = this.creatWallAroundRooms(column, row);
+			grid[row][column] = this.checkCellAroundRooms(column, row);
 		}
 	}
+	this.grid = grid;
+};
+
+Dungeon.prototype.checkCell = function (x, y) {
+	let value = this.grid[y][x];
+	const numWalls = this.countAdjacentWalls(x, y);
+	if (this.isOutOfBounds(x, y)) {
+		value = 1;
+	} else if (numWalls > 4) {
+		value = 1;
+	} else if (numWalls < 4) {
+		value = 0;
+	}
+	return value;
+};
+
+Dungeon.prototype.checkCellAroundRooms = function (x, y) {
+	let value = this.grid[y][x];
+	if (value === 0) {
+		const numWalls = this.countAdjacentWalls(x, y);
+		if (numWalls > 2) {
+			value = 1;
+		}
+	}
+	return value;
+};
+
+Dungeon.prototype.isWall = function (x, y) {
+	if (this.isOutOfBounds(x, y)) {
+		return true;
+	}
+	if (this.grid[y][x] === 1) {
+		return true;
+	}
+	return false;
 };
 
 Dungeon.prototype.isMiddleRoom = function (x, y) {
@@ -234,16 +189,6 @@ Dungeon.prototype.isMiddleRoom = function (x, y) {
 		if (midY - this.minRoomLength <= y && y <= midY + this.minRoomLength) {
 			return true;
 		}
-	}
-	return false;
-};
-
-Dungeon.prototype.isWall = function (x, y) {
-	if (this.isOutOfBounds(x, y)) {
-		return true;
-	}
-	if (this.grid[y][x] === 1) {
-		return true;
 	}
 	return false;
 };
@@ -259,17 +204,10 @@ Dungeon.prototype.isOutOfBounds = function (x, y) {
 };
 
 Dungeon.prototype.isNotPartOfARoom = function (x, y) {
-	this.rooms.forEach(room => {
-		room.forEach(cell => {
-			if (cell.x === x && cell.y === y) {
-				return false;
-			}
-		});
-	});
-	return true;
+	return !this.usedCells.includes({ x, y });
 };
 
-Dungeon.prototype.getAdjacentWalls = function (x, y) {
+Dungeon.prototype.countAdjacentWalls = function (x, y) {
 	let wallCounter = 0;
 	if (this.isWall(x - 1, y - 1)) {
 		wallCounter++;
@@ -301,29 +239,33 @@ Dungeon.prototype.getAdjacentWalls = function (x, y) {
 	return wallCounter;
 };
 
-Dungeon.prototype.getRoomWidth = function (x, y, counter) {
+Dungeon.prototype.countRoomWidth = function (x, y, counter) {
 	if (this.isWall(x + 1, y)) {
 		return counter;
 	}
-	return this.getRoomWidth(x + 1, y, counter + 1);
+	return this.countRoomWidth(x + 1, y, counter + 1);
 };
 
-Dungeon.prototype.getRoomLength = function (x, y, counter) {
+Dungeon.prototype.countRoomLength = function (x, y, counter) {
 	if (this.isWall(x, y + 1)) {
 		return counter;
 	}
-	return this.getRoomLength(x, y + 1, counter + 1);
+	return this.countRoomLength(x, y + 1, counter + 1);
 };
 
-Dungeon.prototype.getRoomGrid = function (x, y, width, length) {
-	const roomGrid = [];
+Dungeon.prototype.getRoomArray = function (x, y, width, length) {
+	const room = [];
 	for (let row = y; row < y + length; row++) {
 		for (let column = x; column < x + width; column++) {
-			roomGrid.push({
+			const cell = {
 				x: column,
 				y: row
-			});
+			};
+			room.push(cell);
+			if (!this.usedCells.includes(cell)) {
+				this.usedCells.push(cell);
+			}
 		}
 	}
-	return roomGrid;
+	return room;
 };
