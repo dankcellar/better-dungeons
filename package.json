@@ -1,6 +1,6 @@
 {
   "name": "better-dungeons",
-  "version": "3.1.1",
+  "version": "4.0.0",
   "description": "A Fast Seedable Asynchronous Procedural Dungeon Generator For Javascript",
   "main": "better-dungeons.js",
   "scripts": {
@@ -25,10 +25,14 @@
   ],
   "homepage": "https://github.com/edowney29/better-dungeons#readme",
   "dependencies": {
-    "pathfinding": "^0.4.18",
+    "easystarjs": "^0.4.3",
     "seedrandom": "^2.4.3"
   },
   "devDependencies": {
     "mocha": "^5.2.0"
+  },
+  "engines": {
+    "node": "10.8.0",
+    "npm": "6.3.0"
   }
 }
