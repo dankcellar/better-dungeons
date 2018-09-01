@@ -26,6 +26,7 @@ async function createDungeon(gridWidth, gridLength, percentWalls, minRoomWidth, 
 	for (let i = 0; i < passes; i++) {
 		dungeon.smoothStepAroundRooms();
 	}
+	dungeon.fillWalkable();
 	return dungeon;
 }
 

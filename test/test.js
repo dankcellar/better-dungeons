@@ -18,11 +18,9 @@ describe('Create new Dungeon', () => {
 		console.log(`Number of rooms: ${dungeon.rooms.length}`);
 		assert.ok(dungeon.rooms.length > 0 && dungeon.paths.length > 0);
 	});
-	/*
-	It('should set walkable tiles to 0', async () => {
-		const dungeon = await betterdungeons(100, 100, 0.3, 5, 5, new Date().getTime().toString());
-		console.log(`Walkable tiles: ${dungeon.rooms.length}`);
-		assert.ok(dungeon.rooms.length > 0 && dungeon.paths.length > 0);
+	it('should have some walkable tiles', async () => {
+		const dungeon = await betterdungeons(100, 100, 1 / 3, 5, 5, new Date().getTime().toString());
+		console.log(`Walkable tiles: ${dungeon.walkableCells}`);
+		assert.ok(dungeon.walkableCells > 0);
 	});
-	*/
 });
