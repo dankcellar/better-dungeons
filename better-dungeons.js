@@ -28,14 +28,14 @@ async function createDungeon(gridWidth, gridLength, percentWalls, minRoomWidth, 
   const passes = Math.floor((Math.sqrt(gridWidth) * Math.sqrt(gridLength)) / 2);
   const dungeon = new Dungeon(gridWidth, gridLength, percentWalls, minRoomWidth, minRoomLength, seed);
   dungeon.fillRandom();
-  for (let i = 0; i < passes; i++) {
+  for (let i = 0; i < passes; i += 1) {
     dungeon.smoothStep();
   }
 
   await dungeon.createRooms();
   await dungeon.removeRooms();
   dungeon.fillRooms();
-  for (let i = 0; i < passes; i++) {
+  for (let i = 0; i < passes; i += 1) {
     dungeon.smoothStepAroundRooms();
   }
 
@@ -44,8 +44,8 @@ async function createDungeon(gridWidth, gridLength, percentWalls, minRoomWidth, 
 
 
 Dungeon.prototype.fillRandom = () => {
-  for (let row = 0; row < this.gridLength; row++) {
-    for (let column = 0; column < this.gridWidth; column++) {
+  for (let row = 0; row < this.gridLength; row += 1) {
+    for (let column = 0; column < this.gridWidth; column += 1) {
       const rng = seedrandom(`${this.seed}-${this.gridWidth}-${this.gridLength}-${column}-${row}`);
       if (column === 0 || row === 0 || column === this.gridWidth - 1 || row === this.gridLength - 1 || rng() <= this.percentWalls) {
         this.grid[row][column] = 1;
@@ -67,8 +67,8 @@ Dungeon.prototype.fillRooms = () => {
 };
 
 Dungeon.prototype.fillWalkable = () => {
-  for (let row = 0; row < this.gridLength; row++) {
-    for (let column = 0; column < this.gridWidth; column++) {
+  for (let row = 0; row < this.gridLength; row += 1) {
+    for (let column = 0; column < this.gridWidth; column += 1) {
       if (this.grid[row][column] !== 1) {
         this.grid[row][column] = 0;
         this.walkableCells += 1;
@@ -79,14 +79,14 @@ Dungeon.prototype.fillWalkable = () => {
 
 Dungeon.prototype.createRooms = async () => {
   const promises = [];
-  for (let row = 0; row < this.gridLength; row++) {
-    for (let column = 0; column < this.gridWidth; column++) {
+  for (let row = 0; row < this.gridLength; row += 1) {
+    for (let column = 0; column < this.gridWidth; column += 1) {
       const p = new Promise((resolve) => {
         if (this.grid[row][column] !== 1) {
           const roomWidth = this.countRoomWidth(column, row, 1);
           if (roomWidth >= this.minRoomWidth) {
             const possibleLengths = [];
-            for (let j = 0; j < roomWidth; j++) {
+            for (let j = 0; j < roomWidth; j += 1) {
               possibleLengths.push(this.countRoomLength(column + j, row, 1));
             }
 
@@ -144,8 +144,8 @@ Dungeon.prototype.removeRooms = async () => {
 };
 
 Dungeon.prototype.smoothStep = () => {
-  for (let row = 0; row < this.gridLength; row++) {
-    for (let column = 0; column < this.gridWidth; column++) {
+  for (let row = 0; row < this.gridLength; row += 1) {
+    for (let column = 0; column < this.gridWidth; column += 1) {
       if (this.grid[row][column] <= 1) {
         this.grid[row][column] = this.creatWall(column, row);
       }
@@ -154,8 +154,8 @@ Dungeon.prototype.smoothStep = () => {
 };
 
 Dungeon.prototype.smoothStepAroundRooms = () => {
-  for (let row = 0; row < this.gridLength; row++) {
-    for (let column = 0; column < this.gridWidth; column++) {
+  for (let row = 0; row < this.gridLength; row += 1) {
+    for (let column = 0; column < this.gridWidth; column += 1) {
       if (this.grid[row][column] <= 1) {
         this.grid[row][column] = this.creatWallAroundRooms(column, row);
       }
@@ -226,39 +226,39 @@ Dungeon.prototype.isOutOfBounds = (x, y) => {
 Dungeon.prototype.countAdjacentWalls = (x, y) => {
   let wallCounter = 0;
   if (this.isWall(x - 1, y - 1)) {
-    wallCounter++;
+    wallCounter += 1;
   }
 
   if (this.isWall(x - 1, y)) {
-    wallCounter++;
+    wallCounter += 1;
   }
 
   if (this.isWall(x - 1, y + 1)) {
-    wallCounter++;
+    wallCounter += 1;
   }
 
   if (this.isWall(x, y - 1)) {
-    wallCounter++;
+    wallCounter += 1;
   }
 
   if (this.isWall(x, y)) {
-    wallCounter++;
+    wallCounter += 1;
   }
 
   if (this.isWall(x, y + 1)) {
-    wallCounter++;
+    wallCounter += 1;
   }
 
   if (this.isWall(x + 1, y - 1)) {
-    wallCounter++;
+    wallCounter += 1;
   }
 
   if (this.isWall(x + 1, y)) {
-    wallCounter++;
+    wallCounter += 1;
   }
 
   if (this.isWall(x + 1, y + 1)) {
-    wallCounter++;
+    wallCounter += 1;
   }
 
   return wallCounter;
@@ -282,8 +282,8 @@ Dungeon.prototype.countRoomLength = (x, y, counter) => {
 
 Dungeon.prototype.getRoomGrid = (x, y, width, length) => {
   const room = [];
-  for (let row = y; row < y + length; row++) {
-    for (let column = x; column < x + width; column++) {
+  for (let row = y; row < y + length; row += 1) {
+    for (let column = x; column < x + width; column += 1) {
       room.push({
         x: column,
         y: row,
