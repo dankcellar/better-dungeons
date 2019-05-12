@@ -87,7 +87,7 @@ class Dungeon {
                 roomLength >= this.minRoomLength
                 && roomLength !== this.gridLength
               ) {
-                resolve(this.getRoomGrid(column, row, roomWidth, roomLength));
+                resolve(getRoomGrid(column, row, roomWidth, roomLength));
               }
             }
           }
@@ -248,19 +248,19 @@ class Dungeon {
     }
     return this.countRoomLength(x, y + 1, counter + 1);
   }
+}
 
-  static getRoomGrid(x, y, width, length) {
-    const roomGrid = [];
-    for (let row = y; row < y + length; row += 1) {
-      for (let column = x; column < x + width; column += 1) {
-        roomGrid.push({
-          x: column,
-          y: row,
-        });
-      }
+function getRoomGrid(x, y, width, length) {
+  const roomGrid = [];
+  for (let row = y; row < y + length; row += 1) {
+    for (let column = x; column < x + width; column += 1) {
+      roomGrid.push({
+        x: column,
+        y: row,
+      });
     }
-    return roomGrid;
   }
+  return roomGrid;
 }
 
 /**
