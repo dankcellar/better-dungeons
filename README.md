@@ -4,8 +4,8 @@ Better dungeons is a fast seedable asynchronous procedural dungeon generator tha
 
 Check out a simple demo [here](https://edowney29.github.io/better-dungeons/)
 
-[![npm](https://img.shields.io/npm/v/better-dungeons.svg)](https://www.npmjs.com/package/better-dungeons) 
-[![npm](https://img.shields.io/npm/dt/better-dungeons.svg)](https://www.npmjs.com/package/better-dungeons) 
+[![npm](https://img.shields.io/npm/v/better-dungeons.svg)](https://www.npmjs.com/package/better-dungeons)
+[![npm](https://img.shields.io/npm/dt/better-dungeons.svg)](https://www.npmjs.com/package/better-dungeons)
 [![Build Status](https://travis-ci.org/edowney29/better-dungeons.svg?branch=master)](https://travis-ci.org/edowney29/better-dungeons)
 
 ```
@@ -15,21 +15,35 @@ npm install better-dungeons
 ## Example
 
 ```js
-const fs = require('fs')
-const betterdungeons = require('better-dungeons')
+const fs = require("fs");
+const betterdungeons = require("better-dungeons");
 
-CreateDungeon(100, 100, 0.3, 5, 5, Date.now().toString())
+CreateDungeon(100, 100, 0.3, 5, 5, Date.now().toString());
 
-async function CreateDungeon(gridWidth, gridLength, percent, roomWidth, roomLength, seed) {
+async function CreateDungeon(
+  gridWidth,
+  gridLength,
+  percent,
+  roomWidth,
+  roomLength,
+  seed
+) {
   try {
-    const dungeon = await betterdungeons(gridWidth, gridLength, percent, roomWidth, roomLength, seed)
-    const file = fs.createWriteStream('dungeon.txt');
+    const dungeon = await betterdungeons(
+      gridWidth,
+      gridLength,
+      percent,
+      roomWidth,
+      roomLength,
+      seed
+    );
+    const file = fs.createWriteStream("dungeon.txt");
     dungeon.grid.forEach(cell => {
-      file.write(cell.join(',') + '\n');
+      file.write(cell.join(",") + "\n");
     });
     file.end();
   } catch (err) {
-    console.log(err)
+    console.log(err);
   }
 }
 ```

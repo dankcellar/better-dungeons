@@ -1,47 +1,45 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
-
-<head>
-    <meta charset="utf-8">
+  <head>
+    <meta charset="utf-8" />
     <title>better-dungeons</title>
-</head>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/4.7.1/pixi.min.js"></script>
-<script src="bundle.js"></script>
+  </head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/4.7.1/pixi.min.js"></script>
+  <script src="bundle.js"></script>
 
-<body>
+  <body>
     <h1>Simple Demo</h1>
     <button type="button" onclick="generate()">Generate</button>
     <p id="status">Generate a 100 by 100 dungeon</p>
     <script type="text/javascript">
-        var app = new PIXI.Application(100 * 10, 100 * 10);
-        document.body.appendChild(app.view);
-        var p = document.getElementById('status');
+      var app = new PIXI.Application(100 * 10, 100 * 10);
+      document.body.appendChild(app.view);
+      var p = document.getElementById("status");
 
-        function generate() {
-            var start = Date.now()
-            betterdungeons(100, 100, 1 / 3, 5, 5, Date.now().toString())
-                .then(dungeon => {
-                    var graphics = new PIXI.Graphics();
-                    for (var row = 0; row < dungeon.gridLength; row++) {
-                        for (var column = 0; column < dungeon.gridWidth; column++) {
-                            if (dungeon.grid[row][column] == 1) {
-                                graphics.beginFill(0x2F4F4F, 1);
-                                graphics.drawRect(column * 10, row * 10, 10, 10);
-                            };
-                            if (dungeon.grid[row][column] != 1) {
-                                graphics.beginFill(0xD3D3D3, 1);
-                                graphics.drawRect(column * 10, row * 10, 10, 10);
-                            };
-                        };
-                    };
-                    p.innerHTML = 'Timer: ' + (Date.now() - start) / 1000 + ' seconds'
-                    app.stage.addChild(graphics);
-                })
-                .catch(err => {
-                    p.innerHTML = 'Something went wrong :(';
-                });
-        };
+      function generate() {
+        var start = Date.now();
+        betterdungeons(100, 100, 1 / 3, 5, 5, Date.now().toString())
+          .then(dungeon => {
+            var graphics = new PIXI.Graphics();
+            for (var row = 0; row < dungeon.gridLength; row++) {
+              for (var column = 0; column < dungeon.gridWidth; column++) {
+                if (dungeon.grid[row][column] == 1) {
+                  graphics.beginFill(0x2f4f4f, 1);
+                  graphics.drawRect(column * 10, row * 10, 10, 10);
+                }
+                if (dungeon.grid[row][column] != 1) {
+                  graphics.beginFill(0xd3d3d3, 1);
+                  graphics.drawRect(column * 10, row * 10, 10, 10);
+                }
+              }
+            }
+            p.innerHTML = "Timer: " + (Date.now() - start) / 1000 + " seconds";
+            app.stage.addChild(graphics);
+          })
+          .catch(err => {
+            p.innerHTML = "Something went wrong :(";
+          });
+      }
     </script>
-</body>
-
+  </body>
 </html>
