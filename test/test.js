@@ -5,9 +5,9 @@ describe('Create new Dungeon', () => {
   it('should be the correct size', async () => {
     const dungeon = await betterdungeons(10, 10, 1 / 3, 1, 1, new Date().getTime().toString());
     let counter = 0;
-    for (let row = 0; row < dungeon.gridLength; row++) {
-      for (let column = 0; column < dungeon.gridWidth; column++) {
-        counter++;
+    for (let row = 0; row < dungeon.gridLength; row += 1) {
+      for (let column = 0; column < dungeon.gridWidth; column += 1) {
+        counter += 1;
       }
     }
     console.log(`Area of grid: ${counter}`);
