@@ -17,7 +17,6 @@ describe('Create new Dungeon', () => {
         counter += 1;
       }
     }
-    console.log(`Area of grid: ${counter}`);
     assert.equal(counter, 100);
   });
   it('should have some rooms', async () => {
@@ -29,7 +28,6 @@ describe('Create new Dungeon', () => {
       5,
       new Date().getTime().toString(),
     );
-    console.log(`Number of rooms: ${dungeon.rooms.length}`);
     assert.ok(dungeon.rooms.length > 0 && dungeon.paths.length > 0);
   });
   /*
