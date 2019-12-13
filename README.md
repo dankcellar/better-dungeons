@@ -2,7 +2,7 @@
 
 Better dungeons is a fast seedable asynchronous procedural dungeon generator that currently only creates an open floor plan dungeon. To do this it first generates a cellular automata cave and begins to simulate life. Once finished, rectangular rooms will be created within the cave to fit all the available space and the cave walls are smoothed to the shape of the rooms. These rooms are then tested using pathfinding to ensure connectivity to the major rooms within the dungeon.
 
-Check out a simple demo [here](https://edowney29.github.io/better-dungeons/)
+Check out a simple demo [here](https://slayerbeing.github.io/better-dungeons/)
 
 [![npm](https://img.shields.io/npm/v/better-dungeons.svg)](https://www.npmjs.com/package/better-dungeons)
 [![npm](https://img.shields.io/npm/dt/better-dungeons.svg)](https://www.npmjs.com/package/better-dungeons)
