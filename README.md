@@ -20,23 +20,9 @@ const betterdungeons = require("better-dungeons");
 
 CreateDungeon(100, 100, 0.3, 5, 5, Date.now().toString());
 
-async function CreateDungeon(
-  gridWidth,
-  gridLength,
-  percent,
-  roomWidth,
-  roomLength,
-  seed
-) {
+async function CreateDungeon(gridWidth, gridLength, percent, roomWidth, roomLength, seed) {
   try {
-    const dungeon = await betterdungeons(
-      gridWidth,
-      gridLength,
-      percent,
-      roomWidth,
-      roomLength,
-      seed
-    );
+    const dungeon = await betterdungeons(gridWidth, gridLength, percent, roomWidth, roomLength, seed);
     const file = fs.createWriteStream("dungeon.txt");
     dungeon.grid.forEach(cell => {
       file.write(cell.join(",") + "\n");
