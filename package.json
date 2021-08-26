@@ -11,10 +11,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/edowney29/better-dungeons.git"
+    "url": "git+https://github.com/dankcellar/better-dungeons.git"
   },
-  "author": "Eric Downey <edowney29@gmail.com>",
-  "license": "Apache-2.0",
   "keywords": [
     "procedural-generation",
     "dungeon-generator",
@@ -23,7 +21,7 @@
     "html5-game",
     "javascript-game"
   ],
-  "homepage": "https://github.com/edowney29/better-dungeons#readme",
+  "homepage": "https://github.com/dankcellar/better-dungeons#readme",
   "dependencies": {
     "easystarjs": "^0.4.3",
     "seedrandom": "^3.0.1"
