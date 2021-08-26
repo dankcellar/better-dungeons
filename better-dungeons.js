@@ -2,14 +2,7 @@ const easystarjs = require('easystarjs');
 const seedrandom = require('seedrandom');
 
 class Dungeon {
-  constructor(
-    gridWidth,
-    gridLength,
-    percentWalls,
-    minRoomWidth,
-    minRoomLength,
-    seed,
-  ) {
+  constructor(gridWidth, gridLength, percentWalls, minRoomWidth, minRoomLength, seed) {
     this.seed = seed;
     this.gridWidth = gridWidth;
     this.gridLength = gridLength;
@@ -19,23 +12,19 @@ class Dungeon {
     this.walkableCells = 0;
     this.rooms = [];
     this.paths = [];
-    this.grid = new Array(gridLength)
-      .fill(0)
-      .map(() => new Array(gridWidth).fill(0));
+    this.grid = new Array(gridLength).fill(0).map(() => new Array(gridWidth).fill(0));
   }
 
   fillRandom() {
     for (let row = 0; row < this.gridLength; row += 1) {
       for (let column = 0; column < this.gridWidth; column += 1) {
-        const prng = seedrandom(
-          `${this.seed}-${this.gridWidth}-${this.gridLength}-${column}-${row}`,
-        );
+        const prng = seedrandom(`${this.seed}-${this.gridWidth}-${this.gridLength}-${column}-${row}`);
         if (
-          column === 0
-          || row === 0
-          || column === this.gridWidth - 1
-          || row === this.gridLength - 1
-          || prng() <= this.percentWalls
+          column === 0 ||
+          row === 0 ||
+          column === this.gridWidth - 1 ||
+          row === this.gridLength - 1 ||
+          prng() <= this.percentWalls
         ) {
           this.grid[row][column] = 1;
         }
@@ -83,10 +72,7 @@ class Dungeon {
                   roomLength = length;
                 }
               });
-              if (
-                roomLength >= this.minRoomLength
-                && roomLength !== this.gridLength
-              ) {
+              if (roomLength >= this.minRoomLength && roomLength !== this.gridLength) {
                 resolve(getRoomGrid(column, row, roomWidth, roomLength));
               }
             }
@@ -97,7 +83,7 @@ class Dungeon {
       }
     }
     const rooms = await Promise.all(promises);
-    this.rooms = rooms.filter(room => room !== null);
+    this.rooms = rooms.filter((room) => room !== null);
   }
 
   async removeRooms() {
@@ -273,23 +259,9 @@ function getRoomGrid(x, y, width, length) {
  * @param {String} seed
  * @return {Promise<Dungeon>}
  */
-const createDungeon = async (
-  gridWidth,
-  gridLength,
-  percentWalls,
-  minRoomWidth,
-  minRoomLength,
-  seed,
-) => {
+const createDungeon = async (gridWidth, gridLength, percentWalls, minRoomWidth, minRoomLength, seed) => {
   const passes = Math.floor((Math.sqrt(gridWidth) * Math.sqrt(gridLength)) / 2);
-  const dungeon = new Dungeon(
-    gridWidth,
-    gridLength,
-    percentWalls,
-    minRoomWidth,
-    minRoomLength,
-    seed,
-  );
+  const dungeon = new Dungeon(gridWidth, gridLength, percentWalls, minRoomWidth, minRoomLength, seed);
   dungeon.fillRandom();
   for (let i = 0; i < passes; i += 1) {
     dungeon.smoothStep();
