@@ -1,5 +1,5 @@
-const easystarjs = require('easystarjs');
-const seedrandom = require('seedrandom');
+import AxStar from './utils/astar.js';
+import mulberry from './utils/mulberry.js';
 
 class Dungeon {
   constructor(gridWidth, gridLength, percentWalls, minRoomWidth, minRoomLength, seed) {
@@ -18,7 +18,7 @@ class Dungeon {
   fillRandom() {
     for (let row = 0; row < this.gridLength; row += 1) {
       for (let column = 0; column < this.gridWidth; column += 1) {
-        const prng = seedrandom(`${this.seed}-${this.gridWidth}-${this.gridLength}-${column}-${row}`);
+        const prng = mulberry(`${this.seed}-${this.gridWidth}-${this.gridLength}-${column}-${row}`);
         if (
           column === 0 ||
           row === 0 ||
@@ -91,17 +91,17 @@ class Dungeon {
       x: Math.floor((this.gridWidth - 1) / 2),
       y: Math.floor((this.gridLength - 1) / 2),
     };
-    const easystar = new easystarjs.js();
-    easystar.setGrid(this.grid);
-    easystar.setAcceptableTiles([0]);
+    const axStar = new AxStar.run();
+    axStar.setGrid(this.grid);
+    axStar.setAcceptableTiles([0]);
     const promises = [];
     this.rooms.forEach((room) => {
       const p = new Promise((resolve) => {
         const cell = room[Math.floor((room.length - 1) / 2)];
-        easystar.findPath(cell.x, cell.y, midCell.x, midCell.y, (path) => {
+        axStar.findPath(cell.x, cell.y, midCell.x, midCell.y, (path) => {
           resolve(path);
         });
-        easystar.calculate();
+        axStar.calculate();
       });
       promises.push(p);
     });
@@ -275,5 +275,6 @@ const createDungeon = async (gridWidth, gridLength, percentWalls, minRoomWidth, 
   return dungeon;
 };
 
-module.exports = createDungeon;
-// createDungeon(100, 100, 1 / 3, 5, 5, Date.now());
+export default createDungeon;
+const data = await createDungeon(100, 100, 1 / 3, 5, 5, Date.now());
+console.log(data);

@@ -3,12 +3,7 @@
   "version": "6.0.0",
   "description": "A Fast Seedable Asynchronous Procedural Dungeon Generator For Javascript",
   "main": "better-dungeons.js",
-  "engines": {
-    "node": "10.15.3"
-  },
-  "scripts": {
-    "test": "mocha"
-  },
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dankcellar/better-dungeons.git"
@@ -21,12 +16,5 @@
     "html5-game",
     "javascript-game"
   ],
-  "homepage": "https://github.com/dankcellar/better-dungeons#readme",
-  "dependencies": {
-    "easystarjs": "^0.4.3",
-    "seedrandom": "^3.0.1"
-  },
-  "devDependencies": {
-    "mocha": "^6.1.4"
-  }
+  "homepage": "https://github.com/dankcellar/better-dungeons#readme"
 }
