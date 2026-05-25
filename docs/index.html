@@ -1,45 +1,521 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>better-dungeons</title>
-  </head>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/4.7.1/pixi.min.js"></script>
-  <script src="bundle.js"></script>
-
-  <body>
-    <h1>Simple Demo</h1>
-    <button type="button" onclick="generate()">Generate</button>
-    <p id="status">Generate a 100 by 100 dungeon</p>
-    <script type="text/javascript">
-      var app = new PIXI.Application(100 * 10, 100 * 10);
-      document.body.appendChild(app.view);
-      var p = document.getElementById("status");
-
-      function generate() {
-        var start = Date.now();
-        betterdungeons(100, 100, 1 / 3, 5, 5, Date.now().toString())
-          .then(dungeon => {
-            var graphics = new PIXI.Graphics();
-            for (var row = 0; row < dungeon.gridLength; row++) {
-              for (var column = 0; column < dungeon.gridWidth; column++) {
-                if (dungeon.grid[row][column] == 1) {
-                  graphics.beginFill(0x2f4f4f, 1);
-                  graphics.drawRect(column * 10, row * 10, 10, 10);
-                }
-                if (dungeon.grid[row][column] != 1) {
-                  graphics.beginFill(0xd3d3d3, 1);
-                  graphics.drawRect(column * 10, row * 10, 10, 10);
-                }
-              }
-            }
-            p.innerHTML = "Timer: " + (Date.now() - start) / 1000 + " seconds";
-            app.stage.addChild(graphics);
-          })
-          .catch(err => {
-            p.innerHTML = "Something went wrong :(";
-          });
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper: #f4f0e4;
+        --ink: #1e2a24;
+        --muted: #4f6358;
+        --card: #fff8ec;
+        --accent: #2f7f65;
+        --accent-soft: #d3ecdf;
+        --border: #b8a98e;
+        --wall: #2f4f4f;
+        --room: #b3d8ee;
+        --hallway: #8fbc8f;
+        --walkable: #e8e8d6;
       }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
+        background:
+          radial-gradient(
+            circle at 15% 15%,
+            #fff8eb 0%,
+            rgba(255, 248, 235, 0) 45%
+          ),
+          radial-gradient(
+            circle at 85% 0%,
+            #d8efe6 0%,
+            rgba(216, 239, 230, 0) 35%
+          ),
+          linear-gradient(135deg, #ece5d8 0%, var(--paper) 55%, #dfe9dd 100%);
+        min-height: 100vh;
+      }
+
+      main {
+        width: min(1240px, 100% - 2rem);
+        margin: 1.5rem auto 2rem;
+      }
+
+      .hero {
+        padding: 1rem 0 1.5rem;
+      }
+
+      .kicker {
+        display: inline-block;
+        padding: 0.25rem 0.65rem;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.45);
+      }
+
+      h1 {
+        margin: 0.7rem 0 0.4rem;
+        font-family: "Source Serif 4", "Georgia", serif;
+        font-size: clamp(1.9rem, 4vw, 3rem);
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        margin: 0;
+        color: var(--muted);
+        max-width: 60ch;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(290px, 360px) minmax(0, 1fr);
+        gap: 1.25rem;
+        align-items: start;
+      }
+
+      .panel {
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.72),
+          rgba(255, 255, 255, 0.52)
+        );
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1rem;
+        backdrop-filter: blur(2px);
+      }
+
+      .panel h2 {
+        margin: 0;
+        font-size: 1.05rem;
+      }
+
+      .controls {
+        margin-top: 0.9rem;
+        display: grid;
+        gap: 0.8rem;
+      }
+
+      .row {
+        display: grid;
+        gap: 0.35rem;
+      }
+
+      .row label {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--muted);
+      }
+
+      input,
+      button {
+        font: inherit;
+      }
+
+      input[type="number"],
+      input[type="text"] {
+        width: 100%;
+        padding: 0.55rem 0.6rem;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        background: #fffdf6;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        accent-color: var(--accent);
+      }
+
+      .generate {
+        margin-top: 0.45rem;
+        border: 0;
+        border-radius: 10px;
+        padding: 0.7rem 0.8rem;
+        color: #f7fff9;
+        background: linear-gradient(135deg, #2a7d64, #1f6350);
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .generate:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+
+      .status-wrap {
+        margin-top: 0.9rem;
+        padding: 0.75rem;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #fffdf6;
+      }
+
+      #status {
+        margin: 0 0 0.5rem;
+        font-size: 0.92rem;
+      }
+
+      #generation-progress {
+        width: 100%;
+        height: 0.72rem;
+      }
+
+      .legend {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(110px, 1fr));
+        gap: 0.55rem;
+        margin-top: 0.9rem;
+      }
+
+      .swatch {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        font-size: 0.84rem;
+        color: var(--muted);
+      }
+
+      .swatch-box {
+        width: 14px;
+        height: 14px;
+        border-radius: 4px;
+        border: 1px solid rgba(0, 0, 0, 0.16);
+      }
+
+      .canvas-panel {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .canvas-panel::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        border-radius: 13px;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #f3f0e5;
+      }
+
+      #canvas-shell {
+        width: 100%;
+        overflow: auto;
+      }
+
+      @media (max-width: 980px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <span class="kicker">Procedural Generation Preview</span>
+        <h1>Better Dungeons Demo</h1>
+        <p class="subtitle">
+          Tune the generator, watch each phase complete in real time, and
+          inspect how rooms and hallways emerge.
+        </p>
+      </section>
+
+      <section class="layout">
+        <aside class="panel">
+          <h2>Generation Controls</h2>
+          <div class="controls">
+            <div class="row">
+              <label for="speed-slider">Playback Speed</label>
+              <input
+                type="range"
+                id="speed-slider"
+                min="0"
+                max="100"
+                value="80"
+              />
+            </div>
+
+            <div class="row">
+              <label for="faction-input">Faction (Wall Density)</label>
+              <input
+                type="number"
+                id="faction-input"
+                min="0"
+                max="1"
+                step="0.01"
+                value="0.33"
+              />
+            </div>
+
+            <div class="row">
+              <label for="min-length-input">Min Room Length</label>
+              <input
+                type="number"
+                id="min-length-input"
+                min="1"
+                step="1"
+                value="5"
+              />
+            </div>
+
+            <div class="row">
+              <label for="min-width-input">Min Room Width</label>
+              <input
+                type="number"
+                id="min-width-input"
+                min="1"
+                step="1"
+                value="5"
+              />
+            </div>
+
+            <div class="row">
+              <label for="seed-input">Seed</label>
+              <input
+                type="text"
+                id="seed-input"
+                placeholder="Leave blank for current time"
+              />
+            </div>
+
+            <button type="button" id="btn-generate" class="generate">
+              Generate Dungeon
+            </button>
+          </div>
+
+          <div class="status-wrap">
+            <p id="status" aria-live="polite">Generate a 100 by 100 dungeon</p>
+            <progress id="generation-progress" max="100" value="0"></progress>
+          </div>
+
+          <div class="legend" aria-label="Tile legend">
+            <div class="swatch">
+              <span
+                class="swatch-box"
+                style="background: var(--walkable)"
+              ></span
+              >Walkable
+            </div>
+            <div class="swatch">
+              <span class="swatch-box" style="background: var(--wall)"></span
+              >Wall
+            </div>
+            <div class="swatch">
+              <span class="swatch-box" style="background: var(--room)"></span
+              >Room
+            </div>
+            <div class="swatch">
+              <span class="swatch-box" style="background: var(--hallway)"></span
+              >Hallway
+            </div>
+          </div>
+        </aside>
+
+        <section class="panel canvas-panel">
+          <h2>Dungeon View</h2>
+          <div id="canvas-shell" aria-label="Dungeon canvas"></div>
+        </section>
+      </section>
+    </main>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/4.7.1/pixi.min.js"></script>
+    <script src="bundle.js"></script>
+    <script type="text/javascript">
+      const width = 100;
+      const height = 100;
+      const cellSize = 10;
+      const TILE = {
+        WALKABLE: 0,
+        WALL: 1,
+        ROOM: 2,
+        HALLWAY: 3,
+      };
+      const TILE_COLOR = {
+        WALKABLE: 0xe8e8d6,
+        WALL: 0x2f4f4f,
+        ROOM: 0xb3d8ee,
+        HALLWAY: 0x8fbc8f,
+      };
+
+      const app = new PIXI.Application(width * cellSize, height * cellSize);
+      document.getElementById("canvas-shell").appendChild(app.view);
+
+      const statusText = document.getElementById("status");
+      const btnGenerate = document.getElementById("btn-generate");
+      const speedSlider = document.getElementById("speed-slider");
+      const factionInput = document.getElementById("faction-input");
+      const minLengthInput = document.getElementById("min-length-input");
+      const minWidthInput = document.getElementById("min-width-input");
+      const seedInput = document.getElementById("seed-input");
+      const progressBar = document.getElementById("generation-progress");
+
+      const graphics = new PIXI.Graphics();
+      app.stage.addChild(graphics);
+
+      let isGenerating = false;
+      let currentTimeoutId = null;
+
+      /**
+       * Returns the user-facing stage label for an upcoming generator step.
+       * @param {number} upcomingStep - One-based step number that will run next.
+       * @param {number} passes - Total smoothing pass count.
+       * @returns {string} Human-readable phase text.
+       */
+      const getStageLabel = (upcomingStep, passes) => {
+        if (upcomingStep === 1) {
+          return "Seeding cave";
+        }
+
+        const caveSmoothEnd = passes + 1;
+        if (upcomingStep <= caveSmoothEnd) {
+          const smoothIndex = upcomingStep - 1;
+          return `Smoothing cave ${smoothIndex}/${passes}`;
+        }
+
+        if (upcomingStep === caveSmoothEnd + 1) {
+          return "Finding rooms and carving hallways";
+        }
+
+        const roomSmoothIndex = upcomingStep - caveSmoothEnd - 1;
+        return `Smoothing around rooms ${roomSmoothIndex}/${passes}`;
+      };
+
+      /**
+       * Renders status text and progress for the upcoming generation step.
+       * @param {number} completedSteps - Number of completed yielded steps.
+       * @param {number} totalSteps - Expected number of yielded steps.
+       * @param {number} passes - Total smoothing pass count.
+       * @param {number} startedAt - Timestamp when generation started.
+       */
+      const renderGenerationStatus = (
+        completedSteps,
+        totalSteps,
+        passes,
+        startedAt,
+      ) => {
+        const nextStep = Math.min(completedSteps + 1, totalSteps);
+        const elapsedSeconds = ((Date.now() - startedAt) / 1000).toFixed(2);
+        const stageLabel = getStageLabel(nextStep, passes);
+        statusText.innerHTML = `Generating: ${stageLabel} (${completedSteps}/${totalSteps}) - ${elapsedSeconds}s`;
+        progressBar.max = totalSteps;
+        progressBar.value = completedSteps;
+      };
+
+      /**
+       * Draws the dungeon grid onto the PIXI graphics object.
+       * @param {Object} dungeon - The dungeon state.
+       */
+      const drawDungeon = (dungeon) => {
+        graphics.clear();
+        for (let row = 0; row < dungeon.gridLength; row += 1) {
+          for (let column = 0; column < dungeon.gridWidth; column += 1) {
+            if (dungeon.grid[row][column] === TILE.WALL) {
+              graphics.beginFill(TILE_COLOR.WALL, 1);
+            } else if (dungeon.grid[row][column] === TILE.ROOM) {
+              graphics.beginFill(TILE_COLOR.ROOM, 1);
+            } else if (dungeon.grid[row][column] === TILE.HALLWAY) {
+              graphics.beginFill(TILE_COLOR.HALLWAY, 1);
+            } else {
+              graphics.beginFill(TILE_COLOR.WALKABLE, 1);
+            }
+            graphics.drawRect(
+              column * cellSize,
+              row * cellSize,
+              cellSize,
+              cellSize,
+            );
+          }
+        }
+      };
+
+      /**
+       * Handles the generation process step-by-step.
+       */
+      const generate = () => {
+        if (isGenerating) {
+          clearTimeout(currentTimeoutId);
+        }
+        isGenerating = true;
+        btnGenerate.disabled = true;
+
+        const start = Date.now();
+        const typedSeed = seedInput.value.trim();
+        const seed = typedSeed === "" ? start.toString() : typedSeed;
+        const faction = parseFloat(factionInput.value);
+        const minLength = parseInt(minLengthInput.value, 10);
+        const minWidth = parseInt(minWidthInput.value, 10);
+        const generator = window.createDungeonSteps(
+          width,
+          height,
+          faction,
+          minLength,
+          minWidth,
+          seed,
+        );
+        const passes = Math.floor((Math.sqrt(width) * Math.sqrt(height)) / 2);
+        const totalSteps = passes * 2 + 2;
+        let completedSteps = 0;
+
+        const finishGeneration = (finalDungeon) => {
+          drawDungeon(finalDungeon);
+          progressBar.value = totalSteps;
+          statusText.innerHTML = `Timer: ${((Date.now() - start) / 1000).toFixed(2)} seconds`;
+          btnGenerate.disabled = false;
+          isGenerating = false;
+        };
+
+        const runStep = () => {
+          const result = generator.next();
+
+          if (result.done) {
+            finishGeneration(result.value);
+            return;
+          }
+
+          completedSteps += 1;
+          drawDungeon(result.value);
+          queueNextStep();
+        };
+
+        const queueNextStep = () => {
+          renderGenerationStatus(completedSteps, totalSteps, passes, start);
+
+          const speedVal = parseInt(speedSlider.value, 10);
+          const delay = Math.max(0, 500 - speedVal * 5);
+
+          requestAnimationFrame(() => {
+            currentTimeoutId = setTimeout(runStep, delay);
+          });
+        };
+
+        queueNextStep();
+      };
+
+      btnGenerate.addEventListener("click", generate);
     </script>
   </body>
 </html>

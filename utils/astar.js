@@ -1,10 +1,10 @@
 /**
- *   Lightweight A* pathfinding inspired by AxStar.js
+ *   Lightweight A* pathfinding inspired by aStar.js
  *   API-compatible surface with performance-focused implementation.
  */
 
-const AxStar = {};
-export default AxStar;
+const aStar = {};
+export default aStar;
 
 // Node states
 const CLOSED = 0;
@@ -13,36 +13,52 @@ const OPEN = 1;
 // Movement costs
 const STRAIGHT_COST = 1.0;
 const DIAGONAL_COST = 1.4142135623730951; // sqrt(2) for accurate diagonal distance
+const DIAGONAL_ADJUSTMENT = DIAGONAL_COST - 2 * STRAIGHT_COST;
 
 // Direction constants for lookup
-const DIRS = {
-  '0,-1': 'TOP',
-  '1,-1': 'TOP_RIGHT',
-  '1,0': 'RIGHT',
-  '1,1': 'BOTTOM_RIGHT',
-  '0,1': 'BOTTOM',
-  '-1,1': 'BOTTOM_LEFT',
-  '-1,0': 'LEFT',
-  '-1,-1': 'TOP_LEFT',
-};
+const DIRS = [
+  "TOP_LEFT",
+  "TOP",
+  "TOP_RIGHT",
+  "LEFT",
+  "",
+  "RIGHT",
+  "BOTTOM_LEFT",
+  "BOTTOM",
+  "BOTTOM_RIGHT",
+];
 
 // Binary min-heap with decrease-key support
 class MinHeap {
-  constructor(compareFn) {
+  /**
+   * Initializes a new, empty binary min-heap.
+   */
+  constructor() {
     this._heap = [];
-    this._cmp = compareFn;
   }
 
+  /**
+   * Gets the number of elements in the heap.
+   * @returns {number} The size of the heap.
+   */
   size() {
     return this._heap.length;
   }
 
+  /**
+   * Pushes a new node onto the heap.
+   * @param {Object} node - The node to add to the heap.
+   */
   push(node) {
     node.heapIndex = this._heap.length;
     this._heap.push(node);
     this._siftUp(node.heapIndex);
   }
 
+  /**
+   * Pops and returns the node with the lowest cost.
+   * @returns {Object|undefined} The node with the lowest cost, or undefined if empty.
+   */
   pop() {
     const heap = this._heap;
     if (heap.length === 0) return undefined;
@@ -59,13 +75,22 @@ class MinHeap {
     return top;
   }
 
+  /**
+   * Updates a node's position in the heap after its cost changes.
+   * @param {Object} node - The node to update.
+   */
   updateItem(node) {
     const idx = node.heapIndex;
-    if (idx == null) return;
+    if (idx === null || idx === undefined || idx === -1) return;
     this._siftUp(idx);
     this._siftDown(idx);
   }
 
+  /**
+   * Swaps two nodes in the heap.
+   * @param {number} i - First index.
+   * @param {number} j - Second index.
+   */
   _swap(i, j) {
     const heap = this._heap;
     const tmp = heap[i];
@@ -75,13 +100,16 @@ class MinHeap {
     heap[j].heapIndex = j;
   }
 
+  /**
+   * Sifts a node up the heap to restore the heap property.
+   * @param {number} idx - The index of the node to sift up.
+   */
   _siftUp(idx) {
     const heap = this._heap;
-    const cmp = this._cmp;
 
     while (idx > 0) {
       const parentIdx = (idx - 1) >> 1;
-      if (cmp(heap[idx], heap[parentIdx]) < 0) {
+      if (heap[idx].f < heap[parentIdx].f) {
         this._swap(idx, parentIdx);
         idx = parentIdx;
       } else {
@@ -90,9 +118,12 @@ class MinHeap {
     }
   }
 
+  /**
+   * Sifts a node down the heap to restore the heap property.
+   * @param {number} idx - The index of the node to sift down.
+   */
   _siftDown(idx) {
     const heap = this._heap;
-    const cmp = this._cmp;
     const len = heap.length;
 
     while (true) {
@@ -100,10 +131,10 @@ class MinHeap {
       const rightIdx = leftIdx + 1;
       let minIdx = idx;
 
-      if (leftIdx < len && cmp(heap[leftIdx], heap[minIdx]) < 0) {
+      if (leftIdx < len && heap[leftIdx].f < heap[minIdx].f) {
         minIdx = leftIdx;
       }
-      if (rightIdx < len && cmp(heap[rightIdx], heap[minIdx]) < 0) {
+      if (rightIdx < len && heap[rightIdx].f < heap[minIdx].f) {
         minIdx = rightIdx;
       }
 
@@ -119,7 +150,10 @@ class MinHeap {
 
 let nextInstanceId = 1;
 
-AxStar.run = function () {
+/**
+ * Main pathfinding system constructor.
+ */
+aStar.run = function () {
   // Configuration
   let syncEnabled = false;
   let diagonalsEnabled = false;
@@ -142,8 +176,23 @@ AxStar.run = function () {
   const instances = new Map();
   const instanceQueue = [];
 
-  // Helper to create coordinate key
-  const coordKey = (x, y) => `${x},${y}`;
+  const neighbors4 = [
+    [0, -1, STRAIGHT_COST, false], // Top
+    [1, 0, STRAIGHT_COST, false], // Right
+    [0, 1, STRAIGHT_COST, false], // Bottom
+    [-1, 0, STRAIGHT_COST, false], // Left
+  ];
+
+  const neighbors8 = [
+    ...neighbors4,
+    [-1, -1, DIAGONAL_COST, true], // Top-left
+    [1, -1, DIAGONAL_COST, true], // Top-right
+    [1, 1, DIAGONAL_COST, true], // Bottom-right
+    [-1, 1, DIAGONAL_COST, true], // Bottom-left
+  ];
+
+  // Helper to create coordinate key (much faster than string interpolation)
+  const coordKey = (x, y) => (x << 16) | (y & 0xffff);
 
   /**
    * Sets which tiles are walkable.
@@ -152,10 +201,12 @@ AxStar.run = function () {
   this.setAcceptableTiles = function (tiles) {
     if (Array.isArray(tiles)) {
       acceptableTilesSet = new Set(tiles);
-    } else if (typeof tiles === 'number' && isFinite(tiles)) {
+    } else if (typeof tiles === "number" && isFinite(tiles)) {
       acceptableTilesSet = new Set([tiles]);
     } else {
-      throw new Error('setAcceptableTiles requires a number or an array of numbers');
+      throw new Error(
+        "setAcceptableTiles requires a number or an array of numbers",
+      );
     }
   };
 
@@ -264,30 +315,44 @@ AxStar.run = function () {
     pointsToAvoid.clear();
   };
 
+  /**
+   * Enables synchronous pathfinding callbacks.
+   */
   this.enableSync = function () {
     syncEnabled = true;
   };
 
+  /**
+   * Disables synchronous pathfinding callbacks.
+   */
   this.disableSync = function () {
     syncEnabled = false;
   };
 
+  /**
+   * Enables diagonal movement.
+   */
   this.enableDiagonals = function () {
     diagonalsEnabled = true;
   };
 
+  /**
+   * Disables diagonal movement.
+   */
   this.disableDiagonals = function () {
     diagonalsEnabled = false;
   };
 
+  /**
+   * Enables diagonal movement passing through corners.
+   */
   this.enableCornerCutting = function () {
     allowCornerCutting = true;
   };
 
-  this.disableCornerCutting = function () {
-    allowCornerCutting = false;
-  };
-
+  /**
+   * Disables diagonal movement passing through corners.
+   */
   this.disableCornerCutting = function () {
     allowCornerCutting = false;
   };
@@ -304,10 +369,14 @@ AxStar.run = function () {
   this.findPath = function (startX, startY, endX, endY, callback) {
     // Validation
     if (!acceptableTilesSet) {
-      throw new Error("You can't set a path without first calling setAcceptableTiles() on AxStar.");
+      throw new Error(
+        "You can't set a path without first calling setAcceptableTiles() on aStar.",
+      );
     }
     if (!collisionGrid) {
-      throw new Error("You can't set a path without first calling setGrid() on AxStar.");
+      throw new Error(
+        "You can't set a path without first calling setGrid() on aStar.",
+      );
     }
     if (
       startX < 0 ||
@@ -319,7 +388,9 @@ AxStar.run = function () {
       endX >= gridWidth ||
       endY >= gridHeight
     ) {
-      throw new Error('Your start or end point is outside the scope of your grid.');
+      throw new Error(
+        "Your start or end point is outside the scope of your grid.",
+      );
     }
 
     // Wrapper for sync vs async callback
@@ -347,7 +418,7 @@ AxStar.run = function () {
     const nodeMap = new Map(); // "x,y" -> node
 
     const instance = {
-      openList: new MinHeap((a, b) => a.f - b.f),
+      openList: new MinHeap(),
       nodeMap,
       startX,
       startY,
@@ -452,11 +523,9 @@ AxStar.run = function () {
     const dy = Math.abs(y1 - y2);
 
     if (diagonalsEnabled) {
-      // Octile distance: D * (dx + dy) + (D2 - 2*D) * min(dx, dy)
-      // Where D = STRAIGHT_COST, D2 = DIAGONAL_COST
+      // Octile distance
       const min = dx < dy ? dx : dy;
-      const max = dx + dy - min;
-      return DIAGONAL_COST * min + STRAIGHT_COST * max;
+      return STRAIGHT_COST * (dx + dy) + DIAGONAL_ADJUSTMENT * min;
     } else {
       // Manhattan distance
       return STRAIGHT_COST * (dx + dy);
@@ -475,8 +544,10 @@ AxStar.run = function () {
 
   // Helper: Check if tile is walkable
   function isWalkable(x, y, fromX, fromY) {
+    const key = coordKey(x, y);
+
     // Check if avoided
-    if (pointsToAvoid.has(coordKey(x, y))) {
+    if (pointsToAvoid.has(key)) {
       return false;
     }
 
@@ -486,10 +557,9 @@ AxStar.run = function () {
     }
 
     // Check directional conditions
-    const key = coordKey(x, y);
     if (directionalConditions.has(key)) {
       const allowed = directionalConditions.get(key);
-      const direction = DIRS[`${fromX - x},${fromY - y}`];
+      const direction = DIRS[fromX - x + 1 + (fromY - y + 1) * 3];
       if (!allowed.includes(direction)) {
         return false;
       }
@@ -503,24 +573,10 @@ AxStar.run = function () {
     const { x, y } = current;
     const { nodeMap, openList, endX, endY } = instance;
 
-    // Define neighbor offsets: [dx, dy, cost]
-    const neighbors = [
-      [0, -1, STRAIGHT_COST], // Top
-      [1, 0, STRAIGHT_COST], // Right
-      [0, 1, STRAIGHT_COST], // Bottom
-      [-1, 0, STRAIGHT_COST], // Left
-    ];
+    const neighbors = diagonalsEnabled ? neighbors8 : neighbors4;
 
-    if (diagonalsEnabled) {
-      neighbors.push(
-        [-1, -1, DIAGONAL_COST], // Top-left
-        [1, -1, DIAGONAL_COST], // Top-right
-        [1, 1, DIAGONAL_COST], // Bottom-right
-        [-1, 1, DIAGONAL_COST], // Bottom-left
-      );
-    }
-
-    for (const [dx, dy, baseCost] of neighbors) {
+    for (let i = 0; i < neighbors.length; i++) {
+      const [dx, dy, baseCost, isDiagonal] = neighbors[i];
       const nx = x + dx;
       const ny = y + dy;
 
@@ -530,7 +586,7 @@ AxStar.run = function () {
       }
 
       // Diagonal corner cutting check
-      if (diagonalsEnabled && dx !== 0 && dy !== 0 && !allowCornerCutting) {
+      if (isDiagonal && !allowCornerCutting) {
         // Check if both adjacent tiles are walkable
         if (!isWalkable(x + dx, y, x, y) || !isWalkable(x, y + dy, x, y)) {
           continue;
@@ -550,17 +606,17 @@ AxStar.run = function () {
 
       if (!neighbor) {
         // New node
+        const h = heuristic(nx, ny, endX, endY);
         neighbor = {
           x: nx,
           y: ny,
           g: tentativeG,
-          h: heuristic(nx, ny, endX, endY),
-          f: 0,
+          h: h,
+          f: tentativeG + h,
           parent: current,
           state: OPEN,
           heapIndex: -1,
         };
-        neighbor.f = neighbor.g + neighbor.h;
         nodeMap.set(key, neighbor);
         openList.push(neighbor);
       } else if (neighbor.state === CLOSED) {
@@ -569,7 +625,7 @@ AxStar.run = function () {
       } else if (tentativeG < neighbor.g) {
         // Better path found
         neighbor.g = tentativeG;
-        neighbor.f = neighbor.g + neighbor.h;
+        neighbor.f = tentativeG + neighbor.h;
         neighbor.parent = current;
         openList.updateItem(neighbor);
       }
@@ -578,11 +634,11 @@ AxStar.run = function () {
 };
 
 // Direction constants for API compatibility
-AxStar.TOP = 'TOP';
-AxStar.TOP_RIGHT = 'TOP_RIGHT';
-AxStar.RIGHT = 'RIGHT';
-AxStar.BOTTOM_RIGHT = 'BOTTOM_RIGHT';
-AxStar.BOTTOM = 'BOTTOM';
-AxStar.BOTTOM_LEFT = 'BOTTOM_LEFT';
-AxStar.LEFT = 'LEFT';
-AxStar.TOP_LEFT = 'TOP_LEFT';
+aStar.TOP = "TOP";
+aStar.TOP_RIGHT = "TOP_RIGHT";
+aStar.RIGHT = "RIGHT";
+aStar.BOTTOM_RIGHT = "BOTTOM_RIGHT";
+aStar.BOTTOM = "BOTTOM";
+aStar.BOTTOM_LEFT = "BOTTOM_LEFT";
+aStar.LEFT = "LEFT";
+aStar.TOP_LEFT = "TOP_LEFT";

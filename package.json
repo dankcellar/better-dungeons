@@ -1,20 +1,45 @@
 {
   "name": "better-dungeons",
-  "version": "6.0.0",
+  "version": "1.0.0",
   "description": "A Fast Seedable Asynchronous Procedural Dungeon Generator For Javascript",
-  "main": "better-dungeons.js",
   "type": "module",
+  "main": "better-dungeons.js",
+  "exports": {
+    ".": "./better-dungeons.js"
+  },
+  "files": [
+    "better-dungeons.js",
+    "utils/"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build:docs": "esbuild docs/demo-entry.js --bundle --outfile=docs/bundle.js",
+    "prepublishOnly": "npm test",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": [
+    "dungeon",
+    "procedural",
+    "generation",
+    "roguelike",
+    "pathfinding",
+    "seedable",
+    "cellular-automata"
+  ],
+  "author": "dankcellar",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dankcellar/better-dungeons.git"
   },
-  "keywords": [
-    "procedural-generation",
-    "dungeon-generator",
-    "rougelike",
-    "game-development",
-    "html5-game",
-    "javascript-game"
-  ],
-  "homepage": "https://github.com/dankcellar/better-dungeons#readme"
+  "homepage": "https://github.com/dankcellar/better-dungeons#readme",
+  "bugs": {
+    "url": "https://github.com/dankcellar/better-dungeons/issues"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0"
+  }
 }
