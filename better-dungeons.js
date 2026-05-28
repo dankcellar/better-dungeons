@@ -35,10 +35,6 @@ class Dungeon {
     this.minRoomWidth = minRoomWidth;
     this.minRoomLength = minRoomLength;
 
-    // Pre-calculate middle coordinates for performance
-    this.midX = Math.floor((this.gridWidth - 1) / 2);
-    this.midY = Math.floor((this.gridLength - 1) / 2);
-
     this.walkableCells = 0;
     this.rooms = [];
     this.roomCenters = [];
@@ -50,7 +46,7 @@ class Dungeon {
   }
 
   /**
-   * Populates the grid with initial random noise and enforces borders and middle room.
+   * Populates the grid with initial random noise while preserving border walls.
    */
   fillRandom() {
     const nextGrid = this.grid.map((row) => [...row]);
@@ -64,9 +60,6 @@ class Dungeon {
           this.prng() <= this.percentWalls
         ) {
           nextGrid[row][column] = TILE.WALL;
-        }
-        if (this.isMiddleRoom(column, row)) {
-          nextGrid[row][column] = TILE.WALKABLE;
         }
       }
     }
@@ -87,33 +80,39 @@ class Dungeon {
   }
 
   /**
-   * Creates hallways so every room can become reachable from the main room.
+   * Creates hallways so every room becomes reachable from every other room.
    * @returns {void}
    */
   createHallways() {
     const roomCenters = this.getRoomCenters();
     this.roomCenters = roomCenters;
 
-    const mainRoomIndex = this.getMainRoomIndex(roomCenters);
-    if (mainRoomIndex === -1) {
+    if (roomCenters.length === 0) {
       this.connectedRooms = [];
       this.paths = [];
       return;
     }
 
+    if (roomCenters.length === 1) {
+      this.connectedRooms = [0];
+      this.paths = [];
+      return;
+    }
+
+    const startRoomIndex = this.getRandomIndex(roomCenters.length);
     const connectionPairs = this.getRoomConnectionPairs(
-      mainRoomIndex,
+      startRoomIndex,
       roomCenters,
     );
-    const pathfinder = this.createHallwayPathfinder();
     const nextGrid = this.grid.map((row) => [...row]);
     const nextPaths = [];
 
     for (let i = 0; i < connectionPairs.length; i += 1) {
       const pair = connectionPairs[i];
-      const fromCenter = roomCenters[pair.from];
-      const toCenter = roomCenters[pair.to];
-      const path = this.findPathBetweenPoints(pathfinder, fromCenter, toCenter);
+      const fromAnchor = this.getRoomMiddleAnchor(this.rooms[pair.from]);
+      const toAnchor = this.getRoomMiddleAnchor(this.rooms[pair.to]);
+      const pathfinder = this.createHallwayPathfinder(nextGrid);
+      const path = this.findPathBetweenPoints(pathfinder, fromAnchor, toAnchor);
       const widenedPath = this.carveWideHallway(nextGrid, path);
       if (widenedPath.length > 0) {
         nextPaths.push(widenedPath);
@@ -126,20 +125,17 @@ class Dungeon {
   }
 
   /**
-   * Normalizes the grid by clearing any non-wall cells into basic walkable space.
+   * Converts any remaining walkable tiles into walls.
    */
   fillWalkable() {
-    let nextWalkableCells = 0;
     const nextGrid = this.grid.map((row) => [...row]);
     for (let row = 0; row < this.gridLength; row += 1) {
       for (let column = 0; column < this.gridWidth; column += 1) {
-        if (nextGrid[row][column] !== TILE.WALL) {
-          nextGrid[row][column] = TILE.WALKABLE;
-          nextWalkableCells += 1;
+        if (nextGrid[row][column] === TILE.WALKABLE) {
+          nextGrid[row][column] = TILE.WALL;
         }
       }
     }
-    this.walkableCells = nextWalkableCells;
     this.grid = nextGrid;
   }
 
@@ -238,14 +234,15 @@ class Dungeon {
   }
 
   /**
-   * Returns all non-wall cells connected to the middle tile using 4-way flood fill.
-   * @returns {Set<number>} Set of coordinate keys connected to the main room.
+   * Returns all non-wall cells connected to the provided tile using 4-way flood fill.
+   * @param {{x: number, y: number}} start - The coordinate to flood fill from.
+   * @returns {Set<number>} Set of coordinate keys connected to the start tile.
    */
-  getConnectedToMainRoom() {
+  getConnectedCellsFrom(start) {
     const coordKey = (x, y) => (x << 16) | (y & 0xffff);
     const connected = new Set();
     const visited = new Set();
-    const stack = [{ x: this.midX, y: this.midY }];
+    const stack = [start];
 
     while (stack.length > 0) {
       const current = stack.pop();
@@ -276,20 +273,28 @@ class Dungeon {
   }
 
   /**
-   * Culls isolated caverns and rooms by keeping only tiles connected to the middle room.
+   * Culls isolated caverns and rooms by keeping only tiles connected to a room anchor.
    * @returns {void}
    */
   removeRooms() {
     const coordKey = (x, y) => (x << 16) | (y & 0xffff);
-    this.grid[this.midY][this.midX] = TILE.WALKABLE;
-    const connectedToMainRoom = this.getConnectedToMainRoom();
+    const anchor = this.getConnectivityAnchor();
+    if (anchor === null) {
+      this.rooms = [];
+      this.roomCenters = [];
+      this.connectedRooms = [];
+      this.paths = [];
+      return;
+    }
+
+    const connectedCells = this.getConnectedCellsFrom(anchor);
 
     const nextGrid = this.grid.map((row) => [...row]);
     for (let y = 0; y < this.gridLength; y += 1) {
       for (let x = 0; x < this.gridWidth; x += 1) {
         if (
           this.grid[y][x] !== TILE.WALL &&
-          !connectedToMainRoom.has(coordKey(x, y))
+          !connectedCells.has(coordKey(x, y))
         ) {
           nextGrid[y][x] = TILE.WALL;
         }
@@ -301,7 +306,7 @@ class Dungeon {
     this.rooms.forEach((room) => {
       if (room.length > 0) {
         const cell = room[0];
-        if (connectedToMainRoom.has(coordKey(cell.x, cell.y))) {
+        if (connectedCells.has(coordKey(cell.x, cell.y))) {
           validRooms.push(room);
         }
       }
@@ -387,27 +392,6 @@ class Dungeon {
       value = TILE.WALL;
     }
     return value;
-  }
-
-  /**
-   * Checks if a coordinate is within the designated middle room zone.
-   * @param {number} x - The x coordinate.
-   * @param {number} y - The y coordinate.
-   * @returns {boolean} True if inside the middle room area.
-   */
-  isMiddleRoom(x, y) {
-    if (
-      this.midX - this.minRoomWidth <= x &&
-      x <= this.midX + this.minRoomWidth
-    ) {
-      if (
-        this.midY - this.minRoomLength <= y &&
-        y <= this.midY + this.minRoomLength
-      ) {
-        return true;
-      }
-    }
-    return false;
   }
 
   /**
@@ -515,86 +499,31 @@ class Dungeon {
   }
 
   /**
-   * Finds the room index that best represents the middle room anchor.
-   * @returns {number} The room index, or -1 when no room exists.
-   */
-  getMainRoomIndex(roomCenters) {
-    if (this.rooms.length === 0) {
-      return -1;
-    }
-
-    for (let index = 0; index < this.rooms.length; index += 1) {
-      const room = this.rooms[index];
-      for (let i = 0; i < room.length; i += 1) {
-        const cell = room[i];
-        if (cell.x === this.midX && cell.y === this.midY) {
-          return index;
-        }
-      }
-    }
-
-    let nearestIndex = 0;
-    let nearestDistance = Number.POSITIVE_INFINITY;
-    for (let index = 0; index < roomCenters.length; index += 1) {
-      const center = roomCenters[index];
-      const dx = center.x - this.midX;
-      const dy = center.y - this.midY;
-      const distance = dx * dx + dy * dy;
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nearestIndex = index;
-      }
-    }
-
-    return nearestIndex;
-  }
-
-  /**
-   * Computes deterministic room connections starting from the main room.
-   * @param {number} mainRoomIndex - The main room index.
+   * Computes room connections starting from a random room while preserving full reachability.
+   * @param {number} startRoomIndex - The room index selected to seed the connection tree.
+   * @param {Array<{x: number, y: number}>} roomCenters - Center points for each room.
    * @returns {Array<{from: number, to: number}>} Selected room-to-room connection pairs.
    */
-  getRoomConnectionPairs(mainRoomIndex, roomCenters) {
+  getRoomConnectionPairs(startRoomIndex, roomCenters) {
     const visited = new Array(this.rooms.length).fill(false);
-    visited[mainRoomIndex] = true;
+    visited[startRoomIndex] = true;
     let visitedCount = 1;
     const pairs = [];
 
     while (visitedCount < this.rooms.length) {
-      let bestPair = null;
-      let bestDistance = Number.POSITIVE_INFINITY;
-
-      for (
-        let visitedIndex = 0;
-        visitedIndex < this.rooms.length;
-        visitedIndex += 1
-      ) {
-        if (!visited[visitedIndex]) {
-          continue;
-        }
-        const visitedCenter = roomCenters[visitedIndex];
-        for (
-          let roomIndex = 0;
-          roomIndex < roomCenters.length;
-          roomIndex += 1
-        ) {
-          if (visited[roomIndex]) {
-            continue;
-          }
-          const roomCenter = roomCenters[roomIndex];
-          const dx = roomCenter.x - visitedCenter.x;
-          const dy = roomCenter.y - visitedCenter.y;
-          const distance = dx * dx + dy * dy;
-
-          if (distance < bestDistance) {
-            bestDistance = distance;
-            bestPair = {
-              from: visitedIndex,
-              to: roomIndex,
+      const nextFromIndex = this.getRandomVisitedRoomIndex(visited);
+      const nextToIndex = this.getClosestUnvisitedRoomIndex(
+        nextFromIndex,
+        visited,
+        roomCenters,
+      );
+      const bestPair =
+        nextToIndex === -1
+          ? null
+          : {
+              from: nextFromIndex,
+              to: nextToIndex,
             };
-          }
-        }
-      }
 
       if (bestPair === null) {
         break;
@@ -606,6 +535,132 @@ class Dungeon {
     }
 
     return pairs;
+  }
+
+  /**
+   * Returns a deterministic random index within the provided length.
+   * @param {number} length - Upper bound for the index selection.
+   * @returns {number} A random index between 0 and length - 1.
+   */
+  getRandomIndex(length) {
+    return Math.floor(this.prng() * length);
+  }
+
+  /**
+   * Returns the best middle anchor for a room, using a random tie-break when needed.
+   * @param {Array<{x: number, y: number}>} room - Room cell list.
+   * @returns {{x: number, y: number}} A coordinate near the room middle.
+   */
+  getRoomMiddleAnchor(room) {
+    let minX = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+
+    room.forEach((cell) => {
+      if (cell.x < minX) {
+        minX = cell.x;
+      }
+      if (cell.x > maxX) {
+        maxX = cell.x;
+      }
+      if (cell.y < minY) {
+        minY = cell.y;
+      }
+      if (cell.y > maxY) {
+        maxY = cell.y;
+      }
+    });
+
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const middleCells = [];
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    room.forEach((cell) => {
+      const dx = cell.x - centerX;
+      const dy = cell.y - centerY;
+      const distance = dx * dx + dy * dy;
+
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        middleCells.length = 0;
+        middleCells.push(cell);
+      } else if (distance === bestDistance) {
+        middleCells.push(cell);
+      }
+    });
+
+    return middleCells[this.getRandomIndex(middleCells.length)];
+  }
+
+  /**
+   * Chooses a random already-visited room index from the connection tree.
+   * @param {boolean[]} visited - Room visitation flags.
+   * @returns {number} Random visited room index.
+   */
+  getRandomVisitedRoomIndex(visited) {
+    const visitedIndexes = [];
+
+    for (let index = 0; index < visited.length; index += 1) {
+      if (visited[index]) {
+        visitedIndexes.push(index);
+      }
+    }
+
+    return visitedIndexes[this.getRandomIndex(visitedIndexes.length)];
+  }
+
+  /**
+   * Finds the nearest unvisited room to the provided visited room index.
+   * @param {number} fromIndex - Visited room index to connect from.
+   * @param {boolean[]} visited - Room visitation flags.
+   * @param {Array<{x: number, y: number}>} roomCenters - Center points for each room.
+   * @returns {number} Closest unvisited room index, or -1 when none remain.
+   */
+  getClosestUnvisitedRoomIndex(fromIndex, visited, roomCenters) {
+    const fromCenter = roomCenters[fromIndex];
+    let nearestIndex = -1;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+
+    for (let roomIndex = 0; roomIndex < roomCenters.length; roomIndex += 1) {
+      if (visited[roomIndex]) {
+        continue;
+      }
+
+      const roomCenter = roomCenters[roomIndex];
+      const dx = roomCenter.x - fromCenter.x;
+      const dy = roomCenter.y - fromCenter.y;
+      const distance = dx * dx + dy * dy;
+
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = roomIndex;
+      }
+    }
+
+    return nearestIndex;
+  }
+
+  /**
+   * Chooses a connectivity anchor from an existing room or open cell.
+   * @returns {{x: number, y: number} | null} Coordinate to use for reachability checks.
+   */
+  getConnectivityAnchor() {
+    if (this.rooms.length > 0) {
+      const room = this.rooms[this.getRandomIndex(this.rooms.length)];
+      return this.getRoomMiddleAnchor(room);
+    }
+
+    for (let y = 0; y < this.gridLength; y += 1) {
+      for (let x = 0; x < this.gridWidth; x += 1) {
+        if (this.grid[y][x] !== TILE.WALL) {
+          return { x, y };
+        }
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -622,15 +677,17 @@ class Dungeon {
 
   /**
    * Creates and configures a pathfinder for hallway carving.
+   * @param {number[][]} grid - Grid snapshot to use for traversal costs.
    * @returns {Object} Configured pathfinder instance.
    */
-  createHallwayPathfinder() {
+  createHallwayPathfinder(grid) {
     const finder = new aStar.run();
     finder.enableSync();
     finder.enableDiagonals();
     finder.disableCornerCutting();
-    finder.setGrid(this.grid);
+    finder.setGrid(grid);
     finder.setAcceptableTiles(this.getHallwayTraversalTiles());
+    finder.setTileCost(TILE.WALL, 8);
     finder.setTileCost(TILE.WALKABLE, 3);
     finder.setTileCost(TILE.ROOM, 1);
     finder.setTileCost(TILE.HALLWAY, 1);
@@ -693,7 +750,7 @@ class Dungeon {
    * @returns {number[]} Unique traversable tile values in the current grid.
    */
   getHallwayTraversalTiles() {
-    return [TILE.WALKABLE, TILE.ROOM, TILE.HALLWAY];
+    return [TILE.WALKABLE, TILE.WALL, TILE.ROOM, TILE.HALLWAY];
   }
 
   /**
@@ -799,12 +856,18 @@ class Dungeon {
   }
 
   /**
-   * Computes which room indexes are currently reachable from the middle room.
+   * Computes which room indexes are currently reachable from a room anchor.
    * @returns {number[]} Connected room indexes.
    */
   getConnectedRoomIndexes() {
+    if (this.rooms.length === 0) {
+      return [];
+    }
+
     const coordKey = (x, y) => (x << 16) | (y & 0xffff);
-    const connectedCells = this.getConnectedToMainRoom();
+    const connectedCells = this.getConnectedCellsFrom(
+      this.getConnectivityAnchor(),
+    );
     const connectedRooms = [];
 
     this.rooms.forEach((room, index) => {
@@ -889,6 +952,7 @@ export function* createDungeonSteps(
     dungeon.smoothStepAroundRooms();
     yield dungeon;
   }
+  dungeon.fillWalkable();
   return dungeon;
 }
 
