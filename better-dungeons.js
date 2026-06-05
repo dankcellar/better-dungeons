@@ -109,8 +109,8 @@ class Dungeon {
 
     for (let i = 0; i < connectionPairs.length; i += 1) {
       const pair = connectionPairs[i];
-      const fromAnchor = this.getRoomMiddleAnchor(this.rooms[pair.from]);
-      const toAnchor = this.getRoomMiddleAnchor(this.rooms[pair.to]);
+      const fromAnchor = this.getRandomRoomAnchor(this.rooms[pair.from]);
+      const toAnchor = this.getRandomRoomAnchor(this.rooms[pair.to]);
       const pathfinder = this.createHallwayPathfinder(nextGrid);
       const path = this.findPathBetweenPoints(pathfinder, fromAnchor, toAnchor);
       const widenedPath = this.carveWideHallway(nextGrid, path);
@@ -215,12 +215,67 @@ class Dungeon {
       }
 
       if (!intersects) {
-        const room = getRoomGrid(
+        let room = getRoomGrid(
           candidate.x,
           candidate.y,
           candidate.width,
           candidate.length,
         );
+
+        const maxOffsetX = candidate.width - this.minRoomWidth;
+        const maxOffsetY = candidate.length - this.minRoomLength;
+
+        const validOffsetsX = [];
+        for (let x = 0; x <= maxOffsetX; x += 1) {
+          if (x !== 1 && maxOffsetX - x !== 1) {
+            validOffsetsX.push(x);
+          }
+        }
+
+        const validOffsetsY = [];
+        for (let y = 0; y <= maxOffsetY; y += 1) {
+          if (y !== 1 && maxOffsetY - y !== 1) {
+            validOffsetsY.push(y);
+          }
+        }
+
+        const hasPlusTwoSpace = maxOffsetX >= 2 || maxOffsetY >= 2;
+
+        // 50% chance to carve a negative space if there is enough room.
+        // It enforces at least one +2 space on a side and never +1 space on any other side.
+        if (
+          hasPlusTwoSpace &&
+          validOffsetsX.length > 0 &&
+          validOffsetsY.length > 0 &&
+          this.prng() > 0.5
+        ) {
+          const cutoutWidth = this.minRoomWidth;
+          const cutoutLength = this.minRoomLength;
+
+          // Randomly choose a valid offset
+          const offsetX =
+            validOffsetsX[Math.floor(this.prng() * validOffsetsX.length)];
+          const offsetY =
+            validOffsetsY[Math.floor(this.prng() * validOffsetsY.length)];
+
+          const cutoutStartX = candidate.x + offsetX;
+          const cutoutStartY = candidate.y + offsetY;
+
+          // Filter out the negative space cells and turn them into walls
+          room = room.filter((cell) => {
+            const inCutout =
+              cell.x >= cutoutStartX &&
+              cell.x < cutoutStartX + cutoutWidth &&
+              cell.y >= cutoutStartY &&
+              cell.y < cutoutStartY + cutoutLength;
+
+            if (inCutout) {
+              this.grid[cell.y][cell.x] = TILE.WALL;
+            }
+            return !inCutout;
+          });
+        }
+
         room.forEach((cell) => {
           const key = (cell.x << 16) | (cell.y & 0xffff);
           occupied.add(key);
@@ -547,6 +602,41 @@ class Dungeon {
   }
 
   /**
+   * Returns a random cell within a room to be used as an anchor.
+   * Prioritizes cells that do not touch any walls to ensure the 2x2 hallway
+   * maker doesn't scrape walls or carve corners. Falls back to the safest
+   * available middle cells for smaller rooms.
+   * @param {Array<{x: number, y: number}>} room - Room cell list.
+   * @returns {{x: number, y: number}} A valid coordinate inside the room.
+   */
+  getRandomRoomAnchor(room) {
+    // Priority 1: Cells fully inside the room, not touching any walls.
+    let validCells = room.filter(
+      (cell) => this.countAdjacentWalls(cell.x, cell.y) === 0,
+    );
+
+    if (validCells.length > 0) {
+      return validCells[this.getRandomIndex(validCells.length)];
+    }
+
+    // Priority 2: For smaller rooms, find cells where the 2x2 stamp
+    // doesn't immediately carve a wall.
+    validCells = room.filter((cell) => {
+      const stampCells = this.getHallwayStampCells(cell);
+      return stampCells.every(
+        (stampCell) => this.isWall(stampCell.x, stampCell.y) === false,
+      );
+    });
+
+    if (validCells.length > 0) {
+      return this.getRoomMiddleAnchor(validCells);
+    }
+
+    // Ultimate fallback for extremely small or misshapen rooms.
+    return this.getRoomMiddleAnchor(room);
+  }
+
+  /**
    * Returns the best middle anchor for a room, using a random tie-break when needed.
    * @param {Array<{x: number, y: number}>} room - Room cell list.
    * @returns {{x: number, y: number}} A coordinate near the room middle.
@@ -687,10 +777,34 @@ class Dungeon {
     finder.disableCornerCutting();
     finder.setGrid(grid);
     finder.setAcceptableTiles(this.getHallwayTraversalTiles());
-    finder.setTileCost(TILE.WALL, 8);
-    finder.setTileCost(TILE.WALKABLE, 3);
-    finder.setTileCost(TILE.ROOM, 1);
-    finder.setTileCost(TILE.HALLWAY, 1);
+
+    for (let y = 0; y < this.gridLength; y += 1) {
+      for (let x = 0; x < this.gridWidth; x += 1) {
+        const stampCells = this.getHallwayStampCells({ x, y });
+        let totalCost = 0;
+
+        for (let i = 0; i < stampCells.length; i += 1) {
+          const cell = stampCells[i];
+          if (this.isOutOfBounds(cell.x, cell.y)) {
+            totalCost += 1000;
+          } else {
+            const tile = grid[cell.y][cell.x];
+            if (tile === TILE.HALLWAY) {
+              totalCost += 1;
+            } else if (tile === TILE.ROOM) {
+              totalCost += 10;
+            } else if (tile === TILE.WALKABLE) {
+              totalCost += 100;
+            } else if (tile === TILE.WALL) {
+              totalCost += 1000;
+            }
+          }
+        }
+
+        finder.setAdditionalPointCost(x, y, totalCost);
+      }
+    }
+
     return finder;
   }
 
@@ -750,7 +864,7 @@ class Dungeon {
    * @returns {number[]} Unique traversable tile values in the current grid.
    */
   getHallwayTraversalTiles() {
-    return [TILE.WALKABLE, TILE.WALL, TILE.ROOM, TILE.HALLWAY];
+    return [TILE.WALKABLE, TILE.ROOM, TILE.HALLWAY, TILE.WALL];
   }
 
   /**
@@ -815,22 +929,15 @@ class Dungeon {
    * @returns {Array<{x: number, y: number}>} Cells to carve for this segment.
    */
   getHallwayStampCells(point, delta) {
-    const cells = [{ x: point.x, y: point.y }];
-
-    if (delta.dx !== 0 && delta.dy !== 0) {
-      cells.push({ x: point.x + delta.dx, y: point.y });
-      cells.push({ x: point.x, y: point.y + delta.dy });
-      return cells;
-    }
-
-    if (delta.dx !== 0) {
-      const offsetY = point.y + 1 < this.gridLength - 1 ? 1 : -1;
-      cells.push({ x: point.x, y: point.y + offsetY });
-      return cells;
-    }
-
+    const cells = [];
     const offsetX = point.x + 1 < this.gridWidth - 1 ? 1 : -1;
+    const offsetY = point.y + 1 < this.gridLength - 1 ? 1 : -1;
+
+    cells.push({ x: point.x, y: point.y });
     cells.push({ x: point.x + offsetX, y: point.y });
+    cells.push({ x: point.x, y: point.y + offsetY });
+    cells.push({ x: point.x + offsetX, y: point.y + offsetY });
+
     return cells;
   }
 
